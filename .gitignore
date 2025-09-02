@@ -16,6 +16,8 @@
 # next.js
 /.next/
 /out/
+out/            # keep ignored unless you use gh-pages and want to publish static build
+*.log
 
 # production
 /build
@@ -32,6 +34,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # vercel
 .vercel
@@ -39,3 +45,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+// e.g., app/api/health/route.ts
+export async function GET() {
+  const db = process.env.DATABASE_URL;
+  return new Response(JSON.stringify({ ok: !!db }), { headers: { 'Content-Type': 'application/json' } });
+}

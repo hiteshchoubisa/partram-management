@@ -24,3 +24,14 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.header-bg {
+  background-color: #edffc8 !important;
+}
+
+button{
+  cursor: pointer;
+  &:active{
+    opacity: 0.7;
+  }
+}
