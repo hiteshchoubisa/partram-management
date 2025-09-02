@@ -88,26 +88,7 @@ export default function Header() {
           <Link href="/reminders" className="text-sm hover:underline">
             Reminders
           </Link>
-          {authed ? (
-            <button
-              type="button"
-              onClick={() => {
-                document.cookie = "pm_auth=; Path=/; Max-Age=0; SameSite=Lax";
-                router.push("/login");
-              }}
-              className="rounded-md border border-black/10 dark:border-white/15 px-3 py-1 text-xs hover:bg-black/[.04] dark:hover:bg-white/[.06]"
-            >
-              Logout
-            </button>
-          ) : (
-            <Link
-              href="/login"
-              prefetch
-              className="rounded-md border border-black/10 dark:border-white/15 px-3 py-1 text-xs hover:bg-black/[.04] dark:hover:bg-white/[.06]"
-            >
-              Login
-            </Link>
-          )}
+           
         </nav>
 
         {/* Mobile menu button */}
