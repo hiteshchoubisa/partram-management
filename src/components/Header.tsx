@@ -205,30 +205,7 @@ export default function Header() {
             >
               Reminders
             </Link>
-            <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800">
-              {authed ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    document.cookie = "pm_auth=; Path=/; Max-Age=0; SameSite=Lax";
-                    setOpen(false);
-                    router.push("/login");
-                  }}
-                  className="w-full text-left block rounded px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                >
-                  Logout
-                </button>
-              ) : (
-                <Link
-                  href="/login"
-                  prefetch
-                  onClick={() => setOpen(false)}
-                  className="block rounded px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                >
-                  Login
-                </Link>
-              )}
-            </div>
+             
           </nav>
         </aside>
       </div>
