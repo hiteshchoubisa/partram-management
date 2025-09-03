@@ -20,6 +20,7 @@ type Visit = {
   uiStatus?: "Pending" | "Completed";
   phone?: string | null;
   address?: string | null;
+  message?: string | null; // + message
 };
 
 type FormState = {
@@ -27,6 +28,7 @@ type FormState = {
   date: string;
   phone: string;
   address: string;
+  message: string; // + message
 };
 
 export default function VisitsTable() {
@@ -45,6 +47,7 @@ export default function VisitsTable() {
     date: "",
     phone: "",
     address: "",
+    message: "", // + message
   });
 
   const [uiStatus, setUiStatus] = useState<"Pending" | "Completed">("Pending");
@@ -99,7 +102,7 @@ export default function VisitsTable() {
     setEditing(null);
     setFormError(null);
     setUiStatus("Pending");
-    setForm({ client: "", date: "", phone: "", address: "" });
+    setForm({ client: "", date: "", phone: "", address: "", message: "" }); // + message
     setIsOpen(true);
   }
 
@@ -112,6 +115,7 @@ export default function VisitsTable() {
       date: v.date,
       phone: v.phone ?? "",
       address: v.address ?? "",
+      message: v.message ?? "", // + message
     });
     setIsOpen(true);
   }
@@ -161,6 +165,7 @@ export default function VisitsTable() {
       date: form.date,
       phone: normalizePhone(form.phone),
       address: form.address.trim(),
+      message: form.message.trim() ? form.message.trim() : null, // + message
     };
 
     try {
@@ -181,7 +186,7 @@ export default function VisitsTable() {
         const res = await fetch("/api/visits", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(payload), // includes message
         });
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || "Add failed");
@@ -229,6 +234,7 @@ export default function VisitsTable() {
     },
     { key: "phone", header: "Phone", accessor: (v) => v.phone || "-" },
     { key: "address", header: "Address", accessor: (v) => v.address || "-" },
+    { key: "message", header: "Message", accessor: (v) => v.message || "-" }, // + message
   ];
 
   return (
@@ -349,6 +355,7 @@ export default function VisitsTable() {
                 ),
               },
               { label: "Address", value: v.address || "-" },
+              { label: "Message", value: v.message || "-" }, // + message
             ]}
           />
         )}
@@ -407,6 +414,20 @@ export default function VisitsTable() {
             placeholder="Street, Area, City"
             rows={3}
             required
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <label htmlFor="message" className="block text-sm font-medium mb-1">
+            Message (optional)
+          </label>
+          <textarea
+            id="message"
+            value={form.message}
+            onChange={(e) => handleChange("message", e.target.value)}
+            className="w-full rounded-md border border-black/10 dark:border-white/15 bg-transparent px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/50"
+            placeholder="Notes or message for this visit"
+            rows={3}
           />
         </div>
 
