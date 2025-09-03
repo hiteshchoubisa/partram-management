@@ -343,7 +343,7 @@ export default function ProductsTable() {
                 <img
                   src={p.photoUrl}
                   alt={p.name}
-                  className="h-14 w-14 rounded-md object-cover border border-black/10 dark:border-white/15"
+                  className="absolute top-[10px] right-[10px] w-20 rounded-md object-cover border border-black/10 dark:border-white/15"
                 />
               ) : undefined
             }

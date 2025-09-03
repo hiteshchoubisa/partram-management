@@ -18,7 +18,7 @@ export default function Header() {
     { name: "Orders", href: "/orders" },
     { name: "Visits", href: "/visits" },
     { name: "Clients", href: "/clients" },
-    { name: "Users", href: "/users" }, // added
+    
   ];
 
   const isActive = (href: string) => {
@@ -85,10 +85,7 @@ export default function Header() {
               {item.name}
             </Link>
           ))}
-          <Link href="/reminders" className="text-sm hover:underline">
-            Reminders
-          </Link>
-           
+          <Link href="/reminders" prefetch>Reminders</Link>
         </nav>
 
         {/* Mobile menu button */}

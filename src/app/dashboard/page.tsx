@@ -150,7 +150,7 @@ export default function DashboardPage() {
                       </p>
                     </div>
                     {o.status ? (
-                      <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs border-black/10 dark:border-white/15">
+                      <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs border-black/10 bg-red-100 dark:border-white/15">
                         {o.status}
                       </span>
                     ) : null}

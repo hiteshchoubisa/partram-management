@@ -131,26 +131,17 @@ export default function VisitsTable() {
   async function confirmDelete() {
     if (!deleting) return;
     try {
-      const res = await fetch("/api/visits", {
+      setLoadError(null);
+      const res = await fetch(`/api/visits/${encodeURIComponent(deleting.id)}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: deleting.id }),
       });
-      // Safely parse JSON if present
-      let json: any = undefined;
-      const text = await res.text();
-      if (text) {
-        try {
-          json = JSON.parse(text);
-        } catch {
-          /* ignore parse errors */
-        }
-      }
-      if (!res.ok) throw new Error(json?.error || "Delete failed");
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Delete failed");
       setVisits((p) => p.filter((v) => v.id !== deleting.id));
     } catch (e: any) {
-      console.error("[visits] delete failed:", e.message);
-      setLoadError(e.message);
+      console.error("[visits] delete failed:", e?.message);
+      setLoadError(e?.message || "Delete failed");
     } finally {
       setDeleting(null);
     }

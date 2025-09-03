@@ -64,11 +64,44 @@ function toWhatsappNumber(phone?: string | null): string | null {
   if (digits.startsWith("0") && digits.length === 11) return "91" + digits.slice(1);
   return digits.length >= 8 ? digits : null;
 }
+
+// Your business WhatsApp number (digits only, no +). Set via env.
+const WHATSAPP_BIZ = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "").replace(/[^\d]/g, "");
+
+// Compose message with “quick reply” links
 function buildWaLink(name: string, phone?: string | null, nextDueAt?: string | null) {
   const num = toWhatsappNumber(phone);
   if (!num) return null;
+
   const when = nextDueAt ? ` on ${formatDateTimeLabel(nextDueAt)}` : "";
-  const msg = `Hi ${name}, this is a reminder for your next order${when}. Please reply to schedule.`;
+
+  // Pre-filled reply links back to your business number
+  const yesLink = WHATSAPP_BIZ ? `https://wa.me/${WHATSAPP_BIZ}?text=${encodeURIComponent("Yes")}` : "";
+  const laterLink = WHATSAPP_BIZ
+    ? `https://wa.me/${WHATSAPP_BIZ}?text=${encodeURIComponent("Remind me in 5 days")}`
+    : "";
+
+  const lines = [
+    `Hi ${name}, Patram Works here.`,
+    `Friendly reminder for your next order${when}.`,
+    "",
+    `Please reply:`,
+    `• Yes`,
+    `• 5 days later`,
+    "",
+    // Optional quick links (clickable)
+    ...(WHATSAPP_BIZ
+      ? [
+          `Quick reply links:`,
+          `Yes: ${yesLink}`,
+          `5 days later: ${laterLink}`,
+        ]
+      : []),
+    "",
+    `Thank you!`,
+  ];
+
+  const msg = lines.join("\n");
   return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
 }
 
@@ -97,6 +130,8 @@ export default function RemindersPage() {
 
   // search
   const [q, setQ] = useState("");
+  // New: filter view
+  const [view, setView] = useState<"all" | "upcoming" | "outgoing">("all");
 
   // Load client prefs from localStorage
   useEffect(() => {
@@ -184,27 +219,49 @@ export default function RemindersPage() {
     });
   }, [clients, orders, prefs]);
 
+  // New: counts per bucket (for chips)
+  const { counts } = useMemo(() => {
+    let past = 0,
+      today = 0,
+      up = 0;
+    for (const r of rows) {
+      if (r.dueLabel === "Past Due") past++;
+      else if (r.dueLabel === "Due Today") today++;
+      else up++;
+    }
+    return { counts: { past, today, up, all: rows.length } };
+  }, [rows]);
+
   // Filter and sort (due first)
   const filtered = useMemo(() => {
-    const ql = q.trim().toLowerCase();
-    const list = ql
-      ? rows.filter(
-          (r) =>
-            r.clientName.toLowerCase().includes(ql) ||
-            (r.phone || "").toString().includes(ql)
-        )
-      : rows.slice();
+    // bucket filter first
+    let list =
+      view === "outgoing"
+        ? rows.filter((r) => r.dueLabel === "Past Due")
+        : view === "upcoming"
+        ? rows.filter((r) => r.dueLabel === "Due Today" || r.dueLabel === "Upcoming")
+        : rows.slice();
 
+    const ql = q.trim().toLowerCase();
+    if (ql) {
+      list = list.filter(
+        (r) =>
+          r.clientName.toLowerCase().includes(ql) ||
+          (r.phone || "").toString().includes(ql)
+      );
+    }
+
+    // Due first: Past Due, Due Today, then by nextDueAt ascending
     list.sort((a, b) => {
-      // Due first: Past Due, Due Today, then by nextDueAt ascending
-      const rank = (r: ReminderRow) => (r.dueLabel === "Past Due" ? 0 : r.dueLabel === "Due Today" ? 1 : 2);
+      const rank = (r: ReminderRow) =>
+        r.dueLabel === "Past Due" ? 0 : r.dueLabel === "Due Today" ? 1 : 2;
       const dr = rank(a) - rank(b);
       if (dr !== 0) return dr;
       return new Date(a.nextDueAt).getTime() - new Date(b.nextDueAt).getTime();
     });
 
     return list;
-  }, [rows, q]);
+  }, [rows, q, view]);
 
   // Pagination slice
   const totalPages = useMemo(() => Math.max(1, Math.ceil(filtered.length / pageSize)), [filtered.length]);
@@ -223,114 +280,169 @@ export default function RemindersPage() {
     });
   }
 
-  // Build columns for desktop table (DataTable handles desktop; cardRenderer handles mobile)
-  const columns: Column<ReminderRow>[] = [
-    { key: "client", header: "Client", accessor: (r) => r.clientName },
-    {
-      key: "phone",
-      header: "Phone",
-      accessor: (r) =>
-        r.phone ? (
-          <a
-            href={`tel:${String(r.phone).replace(/[^+\d]/g, "")}`}
-            className="text-blue-600 hover:underline"
-          >
-            {r.phone}
-          </a>
-        ) : (
-          "-"
-        ),
-    },
-    {
-      key: "lastOrderAt",
-      header: "Last Order",
-      accessor: (r) => (r.lastOrderAt ? formatDateTimeLabel(r.lastOrderAt) : "—"),
-    },
-    {
-      key: "everyDays",
-      header: "Every (days)",
-      accessor: (r) => (
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            min={1}
-            value={r.everyDays}
-            onChange={(e) =>
-              updateEveryDays(r.clientId, parseInt(e.target.value || "1", 10))
-            }
-            className="w-24 rounded-md border border-black/10 dark:border-white/15 bg-transparent px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
-          />
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => updateEveryDays(r.clientId, 15)}
-              className="rounded border border-black/10 dark:border-white/15 px-2 py-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/10"
-              title="Set 15 days"
+  // Columns: add "Late by" when viewing outgoing
+  const columns: Column<ReminderRow>[] = useMemo(() => {
+    const nowIso = new Date().toISOString();
+    const base: Column<ReminderRow>[] = [
+      { key: "client", header: "Client", accessor: (r) => r.clientName },
+      {
+        key: "phone",
+        header: "Phone",
+        accessor: (r) =>
+          r.phone ? (
+            <a
+              href={`tel:${String(r.phone).replace(/[^+\d]/g, "")}`}
+              className="text-blue-600 hover:underline"
             >
-              15d
-            </button>
-            <button
-              type="button"
-              onClick={() => updateEveryDays(r.clientId, 30)}
-              className="rounded border border-black/10 dark:border-white/15 px-2 py-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/10"
-              title="Set 30 days"
-            >
-              30d
-            </button>
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: "nextDueAt",
-      header: "Next Due",
-      accessor: (r) => formatDateTimeLabel(r.nextDueAt),
-    },
-    {
-      key: "status",
-      header: "Status",
-      accessor: (r) => (
-        <span
-          className={
-            "inline-flex items-center rounded-md border px-2 py-0.5 text-xs " +
-            (r.dueLabel === "Past Due"
-              ? "border-red-300 text-red-700"
-              : r.dueLabel === "Due Today"
-              ? "border-amber-300 text-amber-700"
-              : "border-black/10 dark:border-white/15")
-          }
-        >
-          {r.dueLabel}
-        </span>
-      ),
-    },
-    {
-      key: "actions",
-      header: "Actions",
-      accessor: (r) => {
-        const wa = buildWaLink(r.clientName, r.phone, r.nextDueAt);
-        return (
-          <button
-            type="button"
-            onClick={() => wa && window.open(wa, "_blank", "noopener,noreferrer")}
-            disabled={!wa}
-            className={`rounded-md border px-3 py-1 text-sm ${
-              wa
-                ? "border-black/10 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/10"
-                : "border-black/10 dark:border-white/15 opacity-50 cursor-not-allowed"
-            }`}
-            title={wa ? "Send WhatsApp" : "Missing/invalid phone"}
-          >
-            WhatsApp
-          </button>
-        );
+              {r.phone}
+            </a>
+          ) : (
+            "-"
+          ),
       },
-    },
-  ];
+      {
+        key: "lastOrderAt",
+        header: "Last Order",
+        accessor: (r) => (r.lastOrderAt ? formatDateTimeLabel(r.lastOrderAt) : "—"),
+      },
+      {
+        key: "everyDays",
+        header: "Every (days)",
+        accessor: (r) => (
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={1}
+              value={r.everyDays}
+              onChange={(e) =>
+                updateEveryDays(r.clientId, parseInt(e.target.value || "1", 10))
+              }
+              className="w-24 rounded-md border border-black/10 dark:border-white/15 bg-transparent px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+            />
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => updateEveryDays(r.clientId, 15)}
+                className="rounded border border-black/10 dark:border-white/15 px-2 py-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/10"
+                title="Set 15 days"
+              >
+                15d
+              </button>
+              <button
+                type="button"
+                onClick={() => updateEveryDays(r.clientId, 30)}
+                className="rounded border border-black/10 dark:border-white/15 px-2 py-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/10"
+                title="Set 30 days"
+              >
+                30d
+              </button>
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: "nextDueAt",
+        header: "Next Due",
+        accessor: (r) => formatDateTimeLabel(r.nextDueAt),
+      },
+      {
+        key: "status",
+        header: "Status",
+        accessor: (r) => (
+          <span
+            className={
+              "inline-flex items-center rounded-md border px-2 py-0.5 text-xs " +
+              (r.dueLabel === "Past Due"
+                ? "border-red-300 text-red-700"
+                : r.dueLabel === "Due Today"
+                ? "border-amber-300 text-amber-700"
+                : "border-black/10 dark:border-white/15")
+            }
+          >
+            {r.dueLabel}
+          </span>
+        ),
+      },
+      {
+        key: "actions",
+        header: "Actions",
+        accessor: (r) => {
+          const wa = buildWaLink(r.clientName, r.phone, r.nextDueAt);
+          return (
+            <button
+              type="button"
+              onClick={() => wa && window.open(wa, "_blank", "noopener,noreferrer")}
+              disabled={!wa}
+              className={`rounded-md border px-3 py-1 text-sm ${
+                wa
+                  ? "border-black/10 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/10"
+                  : "border-black/10 dark:border-white/15 opacity-50 cursor-not-allowed"
+              }`}
+              title={wa ? "Send WhatsApp" : "Missing/invalid phone"}
+            >
+              WhatsApp
+            </button>
+          );
+        },
+      },
+    ];
+
+    if (view === "outgoing") {
+      base.splice(5, 0, {
+        key: "lateBy",
+        header: "Late by",
+        accessor: (r) => {
+          const late = daysBetween(r.nextDueAt, nowIso) ?? 0; // positive days since due date
+          return late > 0 ? `${late}d` : "—";
+        },
+      });
+    }
+
+    return base;
+  }, [view]);
 
   return (
     <ManagementLayout title="Reminders">
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setView("all")}
+            className={`rounded-md border px-3 py-1.5 text-xs sm:text-sm ${
+              view === "all"
+                ? "bg-foreground text-background"
+                : "border-black/10 dark:border-white/15"
+            }`}
+            title="Show all"
+          >
+            All ({counts.all})
+          </button>
+          <button
+            type="button"
+            onClick={() => setView("upcoming")}
+            className={`rounded-md border px-3 py-1.5 text-xs sm:text-sm ${
+              view === "upcoming"
+                ? "bg-foreground text-background"
+                : "border-black/10 dark:border-white/15"
+            }`}
+            title="Due today and upcoming"
+          >
+            Upcoming ({counts.today + counts.up})
+          </button>
+          <button
+            type="button"
+            onClick={() => setView("outgoing")}
+            className={`rounded-md border px-3 py-1.5 text-xs sm:text-sm ${
+              view === "outgoing"
+                ? "bg-foreground text-background"
+                : "border-black/10 dark:border-white/15"
+            }`}
+            title="Late (Past Due)"
+          >
+            Outgoing ({counts.past})
+          </button>
+        </div>
+
         <input
           type="search"
           placeholder="Search clients…"
@@ -348,19 +460,39 @@ export default function RemindersPage() {
         </div>
       ) : (
         <>
-          {/* One DataTable for both desktop and mobile */}
+        
+        <div className="mb-3">
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              totalItems={filtered.length}
+              onPageChange={setPage}
+            />
+
+          </div> 
           <DataTable
             rows={paged}
             columns={columns}
             rowKey={(r) => r.clientId}
-            emptyMessage="No clients found."
+            emptyMessage={
+              view === "outgoing"
+                ? "No past-due clients."
+                : view === "upcoming"
+                ? "No upcoming reminders."
+                : "No clients found."
+            }
             cardRenderer={(r) => {
               const wa = buildWaLink(r.clientName, r.phone, r.nextDueAt);
+              const late = (daysBetween(r.nextDueAt, new Date().toISOString()) ?? 0) as number;
               return (
                 <MobileCard
                   key={r.clientId}
                   title={r.clientName}
-                  subtitle={`Next: ${formatDateTimeLabel(r.nextDueAt)}`}
+                  subtitle={
+                    view === "outgoing" && late > 0
+                      ? `Late by ${late}d • Next: ${formatDateTimeLabel(r.nextDueAt)}`
+                      : `Next: ${formatDateTimeLabel(r.nextDueAt)}`
+                  }
                   right={
                     <button
                       type="button"
@@ -451,14 +583,6 @@ export default function RemindersPage() {
             }}
           />
 
-          <div className="mt-3">
-            <Pagination
-              page={page}
-              pageSize={pageSize}
-              totalItems={filtered.length}
-              onPageChange={setPage}
-            />
-          </div>
         </>
       )}
     </ManagementLayout>

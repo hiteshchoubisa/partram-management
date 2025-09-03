@@ -66,7 +66,7 @@ export default function DataTable<T>({
             return (
               <div
                 key={key}
-                className="rounded-lg border border-black/10 dark:border-white/15 bg-white dark:bg-zinc-900 p-3"
+                className="relative rounded-lg border border-black/10 dark:border-white/15 bg-white dark:bg-zinc-900 p-3"
               >
                 {cardRenderer ? (
                   cardRenderer(row)

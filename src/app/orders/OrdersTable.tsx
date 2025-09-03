@@ -378,7 +378,14 @@ export default function OrdersTable() {
             }
             rows={[
               { label: "Products", value: orderProductNames(o) || "-" },
-              { label: "Amount", value: inr.format(orderTotal(o)) },
+              {
+                label: "Amount",
+                value: (
+                  <span className="text-base font-bold text-red-700 sm:font-normal sm:text-current">
+                    {inr.format(orderTotal(o))}
+                  </span>
+                ),
+              },
             ]}
           />
         )}
@@ -514,7 +521,10 @@ export default function OrdersTable() {
         </div>
 
         <div className="md:col-span-2 text-sm text-gray-600 dark:text-gray-400">
-          Total: <span className="font-medium">{inr.format(totalAmount)}</span>
+          Total:{" "}
+          <span className="text-base font-bold text-red-700 sm:font-medium sm:text-current">
+            {inr.format(totalAmount)}
+          </span>
         </div>
       </FormDialog>
 

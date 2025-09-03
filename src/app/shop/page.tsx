@@ -266,7 +266,7 @@ export default function ShopPage() {
                   <div className="text-xs text-gray-500 dark:text-gray-400">{p.category || "Uncategorized"}</div>
                   <div className="font-medium truncate">{p.name}</div>
                   <div className="mt-1 flex items-center gap-2">
-                    <span className="text-sm font-semibold">{inr.format(p.price)}</span>
+                    <span className="text-base font-bold text-red-700">{inr.format(p.price)}</span>
                     {typeof p.mrp === "number" && p.mrp > p.price ? (
                       <span className="text-xs text-gray-500 line-through">{inr.format(p.mrp)}</span>
                     ) : null}
