@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { getSupabaseAdmin } from "../../../lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET() {
+  const supabaseAdmin = getSupabaseAdmin();
+  if (!supabaseAdmin) return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
   try {
     const { data, error } = await supabaseAdmin
       .from("visits")
@@ -18,6 +20,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const supabaseAdmin = getSupabaseAdmin();
+  if (!supabaseAdmin) return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
   try {
     const body = await req.json();
     const payload = {
@@ -40,6 +44,8 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
+  const supabaseAdmin = getSupabaseAdmin();
+  if (!supabaseAdmin) return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
   try {
     const body = await req.json();
     const id = String(body.id || "");
@@ -47,8 +53,8 @@ export async function PUT(req: Request) {
     const updates: any = {};
     if (body.client !== undefined) updates.client = String(body.client).trim();
     if (body.date !== undefined) updates.date = String(body.date).trim();
-    if (body.phone !== undefined) updates.phone = body.phone as string | null;
-    if (body.address !== undefined) updates.address = body.address as string | null;
+    if (body.phone !== undefined) updates.phone = (body.phone as string | null) ?? null;
+    if (body.address !== undefined) updates.address = (body.address as string | null) ?? null;
 
     const { data, error } = await supabaseAdmin
       .from("visits")

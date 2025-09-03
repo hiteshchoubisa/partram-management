@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
+import { getSupabaseAdmin } from "../../../../lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const supabaseAdmin = getSupabaseAdmin();
+  if (!supabaseAdmin) return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
   try {
-    const { id } = await params; // Next 15: params is a Promise
+    const { id } = await params;
     if (!id) throw new Error("Missing id");
     const { error } = await supabaseAdmin.from("visits").delete().eq("id", id);
     if (error) throw error;
