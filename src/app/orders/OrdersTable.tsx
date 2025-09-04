@@ -22,10 +22,18 @@ type Product = {
   photoUrl?: string;
 };
 
-type OrderItem = {
-  productId: string;
-  qty: number;
-};
+type OrderItem =
+  | {
+      kind: "product";
+      productId: string;
+      qty: number;
+    }
+  | {
+      kind: "custom";
+      name: string;
+      price: number;
+      qty: number;
+    };
 
 type Order = {
   id: string;
@@ -38,7 +46,7 @@ type Order = {
 type FormState = {
   client: string;
   orderDate: string;
-  status: "Pending" | "Delivered"; // default; edited inline in table
+  status: "Pending" | "Delivered";
   items: OrderItem[];
 };
 
@@ -62,8 +70,8 @@ export default function OrdersTable() {
   const [form, setForm] = useState<FormState>({
     client: "",
     orderDate: "",
-    status: "Pending", // not shown in popup
-    items: [{ productId: "", qty: 1 }],
+    status: "Pending",
+    items: [{ kind: "product", productId: "", qty: 1 }],
   });
 
   const [page, setPage] = useState(1);
@@ -124,12 +132,28 @@ export default function OrdersTable() {
   }, []);
 
   function mapOrderRow(row: any): Order {
+    const raw: any[] = Array.isArray(row.items) ? row.items : [];
+    const items: OrderItem[] = raw.map((it) => {
+      if (it && it.kind === "custom") {
+        return {
+          kind: "custom",
+          name: String(it.name || "").trim(),
+          price: Number(it.price) || 0,
+          qty: Number(it.qty) || 1,
+        };
+      }
+      return {
+        kind: "product",
+        productId: String(it.productId || it.id || "").trim(),
+        qty: Number(it.qty) || 1,
+      };
+    });
     return {
       id: row.id,
       client: row.client,
       orderDate: row.order_date ?? row.orderDate,
       status: row.status,
-      items: Array.isArray(row.items) ? row.items : [],
+      items,
     };
   }
 
@@ -137,15 +161,17 @@ export default function OrdersTable() {
     const base = form.client.trim().length > 0 && form.orderDate.trim().length > 0;
     const hasItems =
       form.items.length > 0 &&
-      form.items.every(
-        (it) => it.productId && it.productId.trim().length > 0 && Number.isFinite(it.qty) && it.qty > 0
+      form.items.every((it) =>
+        it.kind === "custom"
+          ? it.name.trim().length > 0
+          : it.productId.trim().length > 0 && it.qty > 0
       );
     return base && hasItems;
   }, [form]);
 
   function openAdd() {
     setEditing(null);
-    setForm({ client: "", orderDate: "", status: "Pending", items: [{ productId: "", qty: 1 }] });
+    setForm({ client: "", orderDate: "", status: "Pending", items: [{ kind: "product", productId: "", qty: 1 }] });
     setIsOpen(true);
   }
 
@@ -154,7 +180,7 @@ export default function OrdersTable() {
     setForm({
       client: o.client,
       orderDate: o.orderDate,
-      status: o.status, // preserved but not editable in popup
+      status: o.status,
       items: o.items.map((it) => ({ ...it })),
     });
     setIsOpen(true);
@@ -180,16 +206,26 @@ export default function OrdersTable() {
     setIsOpen(false);
   }
 
-  function setItem<K extends keyof OrderItem>(index: number, key: K, value: OrderItem[K]) {
+  function setItem(index: number, patch: Partial<OrderItem>) {
     setForm((prev) => {
       const items = prev.items.slice();
-      items[index] = { ...items[index], [key]: value };
+      items[index] = { ...items[index], ...patch } as any;
       return { ...prev, items };
     });
   }
 
   function addItemRow() {
-    setForm((prev) => ({ ...prev, items: [...prev.items, { productId: "", qty: 1 }] }));
+    setForm((prev) => ({
+      ...prev,
+      items: [...prev.items, { kind: "product", productId: "", qty: 1 }],
+    }));
+  }
+
+  function addCustomItemRow() {
+    setForm((prev) => ({
+      ...prev,
+      items: [...prev.items, { kind: "custom", name: "", price: 0, qty: 1 }],
+    }));
   }
 
   function removeItemRow(index: number) {
@@ -207,9 +243,13 @@ export default function OrdersTable() {
 
     const payload = {
       client: form.client.trim(),
-      order_date: form.orderDate, // ISO string recommended
+      order_date: form.orderDate,
       status: form.status,
-      items: form.items.map((it) => ({ productId: it.productId, qty: it.qty })),
+      items: form.items.map((it) =>
+        it.kind === "custom"
+          ? { kind: "custom", name: it.name.trim(), price: 0, qty: 1 }
+          : { kind: "product", productId: it.productId, qty: it.qty }
+      ),
     };
 
     if (editing) {
@@ -232,24 +272,32 @@ export default function OrdersTable() {
 
   function orderTotal(o: Order) {
     return o.items.reduce((sum, it) => {
+      if (it.kind === "custom") return sum;
       const prod = availableProducts.find((p) => p.id === it.productId);
       return sum + (prod ? prod.price * it.qty : 0);
     }, 0);
   }
 
   function orderProductNames(o: Order) {
-    const names = o.items
-      .map((it) => availableProducts.find((p) => p.id === it.productId)?.name || "")
-      .filter(Boolean);
-    return names.join(", ");
+    return o.items
+      .map((it) =>
+        it.kind === "custom"
+          ? it.name
+          : availableProducts.find((p) => p.id === it.productId)?.name || ""
+      )
+      .filter(Boolean)
+      .join(", ");
   }
 
-  const totalAmount = useMemo(() => {
-    return form.items.reduce((sum, it) => {
-      const prod = availableProducts.find((p) => p.id === it.productId);
-      return sum + (prod ? prod.price * (Number.isFinite(it.qty) ? it.qty : 0) : 0);
-    }, 0);
-  }, [form.items, availableProducts]);
+  const totalAmount = useMemo(
+    () =>
+      form.items.reduce((sum, it) => {
+        if (it.kind === "custom") return sum;
+        const prod = availableProducts.find((p) => p.id === (it as any).productId);
+        return sum + (prod ? prod.price * (Number.isFinite(it.qty) ? it.qty : 0) : 0);
+      }, 0),
+    [form.items, availableProducts]
+  );
 
   // Helpers for react-select options
   type RSOption<TMeta = any> = { value: string; label: string; hint?: string; meta?: TMeta };
@@ -309,9 +357,40 @@ export default function OrdersTable() {
         </select>
       ),
     },
-    { key: "products", header: "Products", accessor: (o) => orderProductNames(o) || "-" },
+    {
+      key: "items",
+      header: "Items",
+      accessor: (o) => (
+        <div className="min-w-[180px]">
+          {o.items && o.items.length > 0 ? renderItemsList(o) : <span className="text-xs opacity-60">—</span>}
+        </div>
+      ),
+    },
     { key: "amount", header: "Amount", accessor: (o) => inr.format(orderTotal(o)) },
   ];
+
+  function renderItemsList(o: Order) {
+    return (
+      <ul className="space-y-1">
+        {o.items.map((it, i) => {
+          const isCustom = it.kind === "custom";
+          const prodName = !isCustom
+            ? availableProducts.find(p => p.id === (it as any).productId)?.name || "—"
+            : it.name;
+          return (
+            <li key={i} className="flex items-center justify-between gap-2 text-xs">
+              <span className="truncate">{prodName}</span>
+              <span className="shrink-0 font-medium">
+                {isCustom
+                  ? (Number(it.price) ? inr.format(Number(it.price)) : "—")
+                  : `${it.qty}`}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
 
   return (
     <div className="w-full">
@@ -341,7 +420,7 @@ export default function OrdersTable() {
         rowKey={(o) => o.id}
         emptyMessage='No orders yet. Click “Add Order” to create one.'
         rowActionsRenderer={(o) => (
-          <>
+          <div className="flex items-center gap-1">
             <button
               type="button"
               aria-label="Edit"
@@ -355,33 +434,52 @@ export default function OrdersTable() {
               type="button"
               aria-label="Delete"
               onClick={() => openDelete(o)}
-              className="rounded-md p-2 hover:bg-black/5 dark:hover:bg-white/10 text-red-600 dark:text-red-400"
+              className="rounded-md p-2 hover:bg-black/5 dark:hover:bg.white/10 text-red-600 dark:text-red-400"
               title="Delete"
             >
               <Trash2 className="h-4 w-4" />
             </button>
-          </>
+          </div>
         )}
         cardRenderer={(o) => (
           <MobileCard
             title={o.client}
             subtitle={formatDateTimeLabel(o.orderDate)}
             right={
-              <select
-                value={o.status}
-                onChange={(e) => updateStatus(o.id, e.target.value as Order["status"])}
-                className="rounded-md border border-black/10 dark:border-white/15 bg-transparent px-2 py-1 text-xs"
-              >
-                <option value="Pending">Pending</option>
-                <option value="Delivered">Delivered</option>
-              </select>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => openEdit(o)}
+                  className="rounded-md border border-black/10 dark:border-white/15 p-2 hover:bg-black/5 dark:hover:bg-white/10"
+                  title="Edit order"
+                  aria-label="Edit order"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeleting(o)}
+                  className="rounded-md border border-red-300 text-red-600 p-2 hover:bg-red-50 dark:border-red-400/40 dark:text-red-300 dark:hover:bg-red-400/10"
+                  title="Delete order"
+                  aria-label="Delete order"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             }
             rows={[
-              { label: "Products", value: orderProductNames(o) || "-" },
+              {
+                label: "Items",
+                value: (
+                  <div className="mt-1">
+                    {o.items && o.items.length > 0 ? renderItemsList(o) : <span className="text-xs opacity-60">—</span>}
+                  </div>
+                ),
+              },
               {
                 label: "Amount",
                 value: (
-                  <span className="text-base font-bold text-red-700 sm:font-normal sm:text-current">
+                  <span className="text-base font-bold text-red-700">
                     {inr.format(orderTotal(o))}
                   </span>
                 ),
@@ -436,84 +534,143 @@ export default function OrdersTable() {
           />
         </div>
 
+        <div>
+          <label htmlFor="status" className="block text-sm font-medium mb-1">Status</label>
+          <select
+            id="status"
+            value={form.status}
+            onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as Order["status"] }))}
+            className="w-full rounded-md border border-black/10 dark:border-white/15 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+          >
+            <option value="Pending">Pending</option>
+            <option value="Delivered">Delivered</option>
+          </select>
+        </div>
+
         <div className="md:col-span-2">
           <div className="flex items-center justify-between mb-2">
             <label className="text-sm font-medium">Items</label>
-            <button
-              type="button"
-              onClick={addItemRow}
-              className="rounded-md border border-black/10 dark:border-white/15 px-3 py-1 text-xs hover:bg-black/[.04] dark:hover:bg-white/[.06]"
-            >
-              + Add Item
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={addItemRow}
+                className="rounded-md border border-black/10 dark:border-white/15 px-3 py-1 text-xs hover:bg-black/[.04] dark:hover:bg.white/[.06]"
+              >
+                + Product
+              </button>
+              <button
+                type="button"
+                onClick={addCustomItemRow}
+                className="rounded-md border border-black/10 dark:border-white/15 px-3 py-1 text-xs hover:bg-black/[.04] dark:hover:bg.white/[.06]"
+              >
+                + Custom
+              </button>
+            </div>
           </div>
 
           <div className="space-y-3">
             {form.items.map((it, idx) => {
-              const selected = availableProducts.find((p) => p.id === it.productId);
+              const isCustom = it.kind === "custom";
+              const selected =
+                !isCustom && availableProducts.find((p) => p.id === (it as any).productId);
               return (
-                <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
-                  {/* Product: react-select Async with price hint */}
-                  <div className="md:col-span-7">
-                    <AsyncSelect
-                      cacheOptions
-                      defaultOptions={availableProducts.slice(0, 100).map((p) => ({
-                        value: p.id,
-                        label: p.name,
-                        hint: inr.format(p.price),
-                        meta: { price: p.price },
-                      }))}
-                      loadOptions={loadProductOptions}
-                      value={
-                        selected
-                          ? ({ value: selected.id, label: selected.name, meta: { price: selected.price } } as any)
-                          : null
-                      }
-                      onChange={(opt: any) => setItem(idx, "productId", opt?.value ?? "")}
-                      placeholder="Search product…"
-                      isClearable
-                      menuPortalTarget={typeof window !== "undefined" ? document.body : undefined}
-                      styles={selectStyles as any}
-                      formatOptionLabel={(opt: any) => (
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="truncate">{opt.label}</span>
-                          {opt.meta?.price != null ? (
-                            <span className="text-[11px] opacity-70">{inr.format(Number(opt.meta.price))}</span>
-                          ) : (
-                            opt.hint ? <span className="text-[11px] opacity-70">{opt.hint}</span> : null
+                // Removed the first column (kind <select>); adjust spans
+                <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start">
+                  {isCustom ? (
+                    <>
+                      {/* Custom description spans more columns now */}
+                      <div className="md:col-span-10">
+                        <input
+                          type="text"
+                          placeholder="Custom note / item description"
+                          value={it.name}
+                          onChange={(e) => setItem(idx, { name: e.target.value })}
+                          className="w-full rounded-md border border-black/10 dark:border-white/15 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+                          required
+                        />
+                      </div>
+                      <div className="md:col-span-2 flex items-center justify-end">
+                        {form.items.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeItemRow(idx)}
+                            className="rounded-md border border-red-300 text-red-600 px-2 py-1 text-xs hover:bg-red-50 dark:border-red-400/40 dark:text-red-300 dark:hover:bg-red-400/10"
+                            aria-label="Remove item"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Product select widens since kind selector removed */}
+                      <div className="md:col-span-7">
+                        <AsyncSelect
+                          cacheOptions
+                          defaultOptions={availableProducts.slice(0, 100).map((p) => ({
+                            value: p.id,
+                            label: p.name,
+                            hint: inr.format(p.price),
+                            meta: { price: p.price },
+                          }))}
+                          loadOptions={loadProductOptions}
+                          value={
+                            selected
+                              ? ({ value: selected.id, label: selected.name, meta: { price: selected.price } } as any)
+                              : null
+                          }
+                          onChange={(opt: any) => setItem(idx, { productId: opt?.value ?? "" })}
+                          placeholder="Search product…"
+                          isClearable
+                          menuPortalTarget={typeof window !== "undefined" ? document.body : undefined}
+                          styles={selectStyles as any}
+                          formatOptionLabel={(opt: any) => (
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="truncate">{opt.label}</span>
+                              {opt.meta?.price != null ? (
+                                <span className="text-[11px] opacity-70">
+                                  {inr.format(Number(opt.meta.price))}
+                                </span>
+                              ) : opt.hint ? (
+                                <span className="text-[11px] opacity-70">{opt.hint}</span>
+                              ) : null}
+                            </div>
                           )}
-                        </div>
-                      )}
-                    />
-                  </div>
+                        />
+                      </div>
 
-                  <input
-                    type="number"
-                    min={1}
-                    value={it.qty}
-                    onChange={(e) =>
-                      setItem(idx, "qty", Math.max(1, Number.parseInt(e.target.value || "1", 10)))
-                    }
-                    className="md:col-span-3 rounded-md border border-black/10 dark:border-white/15 bg-transparent px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/50"
-                    placeholder="Qty"
-                    required
-                  />
+                      {/* Qty */}
+                      <input
+                        type="number"
+                        min={1}
+                        value={it.qty}
+                        onChange={(e) =>
+                          setItem(idx, { qty: Math.max(1, Number.parseInt(e.target.value || "1", 10)) })
+                        }
+                        className="md:col-span-3 rounded-md border border-black/10 dark:border-white/15 bg-transparent px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/50"
+                        placeholder="Qty"
+                        required
+                      />
 
-                  <div className="md:col-span-2 flex items-center justify-end gap-2">
-                    <span className="text-xs text-gray-600 dark:text-gray-400">
-                      {selected ? inr.format(selected.price * it.qty) : "-"}
-                    </span>
-                    {form.items.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeItemRow(idx)}
-                        className="rounded-md border border-red-300 text-red-600 px-2 py-1 text-xs hover:bg-red-50 dark:border-red-400/40 dark:text-red-300 dark:hover:bg-red-400/10"
-                        aria-label="Remove item"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
+                      {/* Line total + remove */}
+                      <div className="md:col-span-2 flex items-center justify-end gap-2">
+                        <span className="text-xs text-gray-600 dark:text-gray-400">
+                          {selected ? inr.format(selected.price * it.qty) : "-"}
+                        </span>
+                        {form.items.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeItemRow(idx)}
+                            className="rounded-md border border-red-300 text-red-600 px-2 py-1 text-xs hover:bg-red-50 dark:border-red-400/40 dark:text-red-300 dark:hover:bg-red-400/10"
+                            aria-label="Remove item"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               );
             })}

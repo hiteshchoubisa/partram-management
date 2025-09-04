@@ -5,21 +5,20 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 
+const nav = [
+  { href: "/dashboard/", label: "Dashboard" },
+  { href: "/orders/", label: "Orders" },
+  { href: "/clients/", label: "Clients" },
+  { href: "/products/", label: "Products" },
+  { href: "/shop/", label: "Shop" },
+  { href: "/reminders/", label: "Reminders" },
+];
+
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [authed, setAuthed] = useState(false);
-
-  const nav = [
-    { name: "Dashboard", href: "/dashboard" },
-    { name: "Shop", href: "/shop" },
-    { name: "Products", href: "/products" },
-    { name: "Orders", href: "/orders" },
-    { name: "Visits", href: "/visits" },
-    { name: "Clients", href: "/clients" },
-    
-  ];
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -82,10 +81,9 @@ export default function Header() {
               aria-current={isActive(item.href) ? "page" : undefined}
               className={`hover:underline ${isActive(item.href) ? "underline underline-offset-4 font-medium" : ""}`}
             >
-              {item.name}
+              {item.label}
             </Link>
           ))}
-          <Link href="/reminders" prefetch>Reminders</Link>
         </nav>
 
         {/* Mobile menu button */}
@@ -167,23 +165,9 @@ export default function Header() {
                 aria-current={isActive(item.href) ? "page" : undefined}
                 className={`block rounded px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 ${isActive(item.href) ? "font-medium underline underline-offset-4" : ""}`}
               >
-                {item.name}
+                {item.label}
               </Link>
             ))}
-            <Link
-              href="/reminders"
-              prefetch
-              onMouseEnter={() => {
-                const r: any = router as any;
-                if (typeof r?.prefetch === "function") r.prefetch("/reminders");
-              }}
-              onClick={() => setOpen(false)}
-              aria-current={isActive("/reminders") ? "page" : undefined}
-              className={`block rounded px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 ${isActive("/reminders") ? "font-medium underline underline-offset-4" : ""}`}
-            >
-              Reminders
-            </Link>
-             
           </nav>
         </aside>
       </div>
