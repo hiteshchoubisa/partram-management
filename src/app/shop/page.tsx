@@ -5,6 +5,7 @@ import ManagementLayout from "../../components/ManagementLayout";
 import { supabase } from "../../lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import FormDialog from "../../components/ui/FormDialog";
+import AsyncSelect from "react-select/async";
 
 const inr = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" });
 const PRODUCT_BUCKET = process.env.NEXT_PUBLIC_PRODUCT_BUCKET || "product-photos";
@@ -31,6 +32,24 @@ function resolvePhotoUrl(v?: string | null) {
   if (!v) return undefined;
   if (v.startsWith("http")) return v;
   return supabase.storage.from(PRODUCT_BUCKET).getPublicUrl(v).data.publicUrl || undefined;
+}
+
+// (optional) reuse minimal styles so menu renders above dialog
+const selectStyles = {
+  menuPortal: (base: any) => ({ ...base, zIndex: 50 }),
+  menu: (base: any) => ({ ...base, zIndex: 50 }),
+};
+
+async function loadClientOptions(input: string) {
+  const term = input.trim();
+  let q = supabase.from("clients").select("name,phone").order("name", { ascending: true }).limit(25);
+  if (term) q = q.ilike("name", `%${term}%`);
+  const { data } = await q;
+  return (data || []).map((c: any) => ({
+    value: c.name,
+    label: c.name,
+    hint: c.phone || undefined,
+  }));
 }
 
 export default function ShopPage() {
@@ -246,8 +265,8 @@ export default function ShopPage() {
                       Add
                     </button>
                   </div>
-                </div>
                  
+                </div>
               </li>
             ))}
           </ul>
@@ -329,21 +348,39 @@ export default function ShopPage() {
         align="start"
       >
         <div>
-          <label htmlFor="client" className="block text-sm font-medium mb-1">Client</label>
-          <select
-            id="client"
-            value={selectedClient}
-            onChange={(e) => setSelectedClient(e.target.value)}
-            className="w-full rounded-md border border-black/10 dark:border-white/15 bg-transparent px-3 py-2"
-            required
-          >
-            <option value="" disabled>Select client</option>
-            {clients.map((c, i) => (
-              <option key={`${c.name}-${i}`} value={c.name}>
-                {c.name} {c.phone ? `(${c.phone})` : ""}
-              </option>
-            ))}
-          </select>
+          <label htmlFor="client" className="block text-sm font-medium mb-1">
+            Client
+          </label>
+          <AsyncSelect
+            inputId="client"
+            cacheOptions
+            defaultOptions={clients.slice(0, 50).map((c) => ({
+              value: c.name,
+              label: c.name,
+              hint: c.phone || undefined,
+            }))}
+            loadOptions={loadClientOptions}
+            value={
+              selectedClient
+                ? ({ value: selectedClient, label: selectedClient } as any)
+                : null
+            }
+            onChange={(opt: any) => setSelectedClient(opt?.value ?? "")}
+            placeholder="Search client…"
+            isClearable
+            menuPortalTarget={
+              typeof window !== "undefined" ? document.body : undefined
+            }
+            styles={selectStyles as any}
+            formatOptionLabel={(opt: any) => (
+              <div className="flex items-center justify-between gap-3">
+                <span className="truncate">{opt.label}</span>
+                {opt.hint ? (
+                  <span className="text-[11px] opacity-70 truncate">{opt.hint}</span>
+                ) : null}
+              </div>
+            )}
+          />
         </div>
 
         <div className="md:col-span-2">

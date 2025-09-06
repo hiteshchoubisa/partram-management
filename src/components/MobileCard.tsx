@@ -23,7 +23,7 @@ export default function MobileCard({ title, subtitle, right, rows, children }: P
       </div>
 
       {rows && rows.length > 0 ? (
-        <div className="mt-2 text-sm space-y-1">
+        <div className="mt-0 text-sm space-y-1">
           {rows.map((r, i) => (
             <div key={i} className="text-gray-600 dark:text-gray-400">
               <span className="text-xs uppercase tracking-wide">{r.label}: </span>

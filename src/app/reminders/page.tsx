@@ -654,7 +654,11 @@ export default function RemindersPage() {
                         {r.clientName}
                       </button>
                     )}
-                    subtitle={`Next: ${formatDateTimeLabel(r.nextDueAt)}`}
+                    subtitle={
+                      <span className="text-blue-600 font-medium">
+                        Next: {formatDateTimeLabel(r.nextDueAt)}
+                      </span>
+                    }
                     right={
                       <div className="flex items-center gap-2">
                         <button
@@ -670,6 +674,15 @@ export default function RemindersPage() {
                         >
                           <WhatsAppIcon />
                           <span className="sr-only">WhatsApp</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openEditReminder(r)}
+                          className="rounded-md border border-black/10 dark:border-white/15 p-2 text-xs flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10"
+                          title="Edit reminder"
+                        >
+                          <Pencil className="h-4 w-4" />
+                          <span className="sr-only">Edit reminder</span>
                         </button>
                       </div>
                     }

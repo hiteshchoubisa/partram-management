@@ -12,7 +12,6 @@ import PhoneInput from "../../components/ui/PhoneInput";
 import PhoneCell from "../../components/ui/PhoneCell";
 import { usePhoneValidation } from "../../lib/phone";
 
-
 type Client = {
   id: string;
   name: string;
@@ -39,19 +38,31 @@ export default function ClientsTable() {
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const [formError, setFormError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+
+  const filteredClients = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return clients;
+    return clients.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      (c.address ?? "").toLowerCase().includes(q) ||
+      (c.phone ? String(c.phone).toLowerCase().includes(q) : false)
+    );
+  }, [clients, query]);
 
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(clients.length / pageSize)),
-    [clients.length]
+    () => Math.max(1, Math.ceil(filteredClients.length / pageSize)),
+    [filteredClients.length]
   );
+
   useEffect(() => {
     setPage((p) => Math.min(p, totalPages));
   }, [totalPages]);
 
   const pagedClients = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return clients.slice(start, start + pageSize);
-  }, [clients, page]);
+    return filteredClients.slice(start, start + pageSize);
+  }, [filteredClients, page]);
 
   function handleChange<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({
@@ -220,23 +231,38 @@ export default function ClientsTable() {
         </div>
       ) : null}
 
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          Manage your clients. Add, edit, or delete clients.
-        </p>
-        <button
-          type="button"
-          onClick={openAdd}
-          className="inline-flex items-center gap-2 rounded-md bg-foreground text-background px-4 py-2 text-sm font-medium hover:opacity-90"
-        >
-          + Add Client
-        </button>
+      <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 w-full sm:w-auto">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Manage your clients. Search by name or address.
+          </p>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => {
+              setPage(1);
+              setQuery(e.target.value);
+            }}
+            placeholder="Search name, phone or address..."
+            className="w-full sm:w-72 rounded-md border border-black/10 dark:border-white/15 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+            aria-label="Search clients by name, phone or address"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={openAdd}
+            className="inline-flex items-center gap-2 rounded-md bg-foreground text-background px-4 py-2 text-sm font-medium hover:opacity-90"
+          >
+            + Add Client
+          </button>
+        </div>
       </div>
 
       <Pagination
         page={page}
         pageSize={pageSize}
-        totalItems={clients.length}
+        totalItems={filteredClients.length}
         onPageChange={setPage}
       />
 
@@ -244,7 +270,11 @@ export default function ClientsTable() {
         rows={pagedClients}
         columns={clientColumns}
         rowKey={(c) => c.id}
-        emptyMessage="No clients yet. Click “Add Client” to create one."
+        emptyMessage={
+          query
+            ? "No clients match your search."
+            : "No clients yet. Click “Add Client” to create one."
+        }
         rowActionsRenderer={(c) => (
           <>
             <button
@@ -270,7 +300,8 @@ export default function ClientsTable() {
         cardRenderer={(c) => (
           <MobileCard
             title={c.name}
-            subtitle={c.company || c.city || c.phone || ""}
+            // Remove phone from subtitle to avoid duplicate display (it still appears in rows)
+            subtitle={c.company || c.city || ""}
             right={
               <div className="flex items-center gap-2">
                 <button

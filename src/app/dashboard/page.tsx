@@ -15,17 +15,25 @@ type Order = {
   items?: any;
 };
 
+const STATUS_TABS = ["Pending", "Delivered", "Completed"] as const;
+type OrderStatusTab = typeof STATUS_TABS[number];
+
 export default function DashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersErr, setOrdersErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
-  const [pendingErr, setPendingErr] = useState<string | null>(null);
-  const [pendingLoading, setPendingLoading] = useState(true);
+  const [statusTab, setStatusTab] = useState<OrderStatusTab>("Pending");
+  const [statusOrders, setStatusOrders] = useState<Record<OrderStatusTab, Order[]>>({
+    Pending: [],
+    Delivered: [],
+    Completed: [],
+  });
+  const [statusLoading, setStatusLoading] = useState(true);
+  const [statusErr, setStatusErr] = useState<string | null>(null);
 
   useEffect(() => {
     void loadUpcomingOrders();
-    void loadPendingOrders();
+    void loadStatusOrders();
   }, []);
 
   async function loadUpcomingOrders() {
@@ -49,22 +57,43 @@ export default function DashboardPage() {
     }
   }
 
-  async function loadPendingOrders() {
+  async function loadStatusOrders() {
     try {
-      setPendingErr(null);
-      setPendingLoading(true);
+      setStatusErr(null);
+      setStatusLoading(true);
       const { data, error } = await supabase
         .from("orders")
         .select("id, client, order_date, status")
-        .eq("status", "Pending")
+        .in("status", STATUS_TABS as any)
         .order("order_date", { ascending: true });
       if (error) throw error;
-      setPendingOrders((data as Order[]) ?? []);
+
+      const map: Record<OrderStatusTab, Order[]> = {
+        Pending: [],
+        Delivered: [],
+        Completed: [],
+      };
+      (data as Order[]).forEach(o => {
+        const st = (o.status || "Pending") as OrderStatusTab;
+        if (map[st]) map[st].push(o);
+      });
+      setStatusOrders(map);
     } catch (e: any) {
-      console.error("[dashboard] pending orders load failed:", e?.message);
-      setPendingErr(e?.message || "Failed to load pending orders");
+      console.error("[dashboard] status orders load failed:", e?.message);
+      setStatusErr(e?.message || "Failed to load orders by status");
     } finally {
-      setPendingLoading(false);
+      setStatusLoading(false);
+    }
+  }
+
+  function statusBadgeClass(s?: string | null) {
+    switch (s) {
+      case "Delivered":
+        return "border-green-300 text-green-700";
+      case "Completed":
+        return "border-blue-300 text-blue-700";
+      default:
+        return "border-amber-300 text-amber-700";
     }
   }
 
@@ -74,26 +103,46 @@ export default function DashboardPage() {
         <MonthlySalesWidget />
       </section>
 
-      {/* Pending Orders Section */}
+      {/* Orders by Status Section */}
       <section className="rounded-lg border border-black/10 dark:border-white/15 p-4 mb-8">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold">Pending Orders</h2>
-          <Link href="/orders" className="text-sm text-blue-600 hover:underline" prefetch>
-            Manage
-          </Link>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-base font-semibold">Orders by Status</h2>
+          <div className="flex gap-2">
+            {STATUS_TABS.map(st => {
+              const count = statusOrders[st]?.length || 0;
+              const active = statusTab === st;
+              return (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setStatusTab(st)}
+                  className={`rounded-md border px-3 py-1.5 text-xs sm:text-sm transition ${
+                    active
+                      ? "bg-foreground text-background"
+                      : "border-black/10 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/10"
+                  }`}
+                  title={st}
+                >
+                  {st} ({count})
+                </button>
+              );
+            })}
+          </div>
         </div>
-        {pendingErr && !pendingLoading ? (
+
+        {statusErr && !statusLoading ? (
           <div className="mb-3 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
-            {pendingErr}
+            {statusErr}
           </div>
         ) : null}
-        {pendingLoading ? (
-          <p className="text-sm text-gray-600 dark:text-gray-400">Loading pending orders…</p>
-        ) : pendingOrders.length === 0 ? (
-          <p className="text-sm opacity-70">No pending orders.</p>
+
+        {statusLoading ? (
+          <p className="text-sm text-gray-600 dark:text-gray-400">Loading orders…</p>
+        ) : statusOrders[statusTab].length === 0 ? (
+          <p className="text-sm opacity-70">No {statusTab.toLowerCase()} orders.</p>
         ) : (
           <ul className="divide-y divide-black/10 dark:divide-white/10">
-            {pendingOrders.map((o) => (
+            {statusOrders[statusTab].map(o => (
               <li key={o.id} className="py-3 flex items-center justify-between">
                 <div>
                   <p className="font-medium">{o.client}</p>
@@ -101,7 +150,12 @@ export default function DashboardPage() {
                     {formatDateTimeLabel(o.order_date)}
                   </p>
                 </div>
-                <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs border-amber-300 text-amber-700">
+                <span
+                  className={
+                    "inline-flex items-center rounded-md border px-2 py-0.5 text-xs " +
+                    statusBadgeClass(o.status)
+                  }
+                >
                   {o.status || "Pending"}
                 </span>
               </li>
@@ -110,47 +164,7 @@ export default function DashboardPage() {
         )}
       </section>
 
-      {/* Upcoming Orders Section */}
-      <section className="rounded-lg border border-black/10 dark:border-white/15 p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold">Upcoming Orders</h2>
-          <Link href="/orders" className="text-sm text-blue-600 hover:underline" prefetch>
-            See all
-          </Link>
-        </div>
-
-        {ordersErr && !loading ? (
-          <div className="mb-3 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
-            {ordersErr}
-          </div>
-        ) : null}
-
-        {loading ? (
-          <p className="text-sm text-gray-600 dark:text-gray-400">Loading orders…</p>
-        ) : orders.length === 0 ? (
-          <p className="text-sm text-gray-600 dark:text-gray-400">No upcoming orders.</p>
-        ) : (
-          <ul className="divide-y divide-black/10 dark:divide-white/10">
-            {orders.map((o) => (
-              <li key={o.id} className="py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-medium">{o.client}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                      {formatDateTimeLabel(o.order_date)}
-                    </p>
-                  </div>
-                  {o.status ? (
-                    <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs border-black/10 dark:border-white/15">
-                      {o.status}
-                    </span>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      
     </ManagementLayout>
   );
 }
