@@ -39,7 +39,7 @@ type Order = {
   id: string;
   client: string;
   orderDate: string; // YYYY-MM-DD or YYYY-MM-DDTHH:mm
-  status: "Pending" | "Delivered" | "Completed";
+  status: "Pending" | "Delivered";
   items: OrderItem[];
   message?: string | null;
   discount?: number | null;
@@ -48,7 +48,7 @@ type Order = {
 type FormState = {
   client: string;
   orderDate: string;
-  status: "Pending" | "Delivered" | "Completed";
+  status: "Pending" | "Delivered";
   items: OrderItem[];
   message: string;
   discount: number;
@@ -154,11 +154,14 @@ export default function OrdersTable() {
         qty: Number(it.qty) || 1,
       };
     });
+    const rawStatus = row.status;
+    const status: Order["status"] =
+      rawStatus === "Delivered" ? "Delivered" : "Pending";
     return {
       id: row.id,
       client: row.client,
       orderDate: row.order_date ?? row.orderDate,
-      status: row.status,
+      status,
       items,
       message: row.message ?? null,
       discount: row.discount != null ? Number(row.discount) : null,
@@ -243,8 +246,31 @@ export default function OrdersTable() {
   }
 
   function updateStatus(orderId: string, next: Order["status"]) {
+    if (next !== "Pending" && next !== "Delivered") next = "Pending";
+    // Optimistic UI
     setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: next } : o)));
-    supabase.from("orders").update({ status: next }).eq("id", orderId);
+    supabase
+      .from("orders")
+      .update({ status: next })
+      .eq("id", orderId)
+      .then(({ error }) => {
+        if (!error && typeof window !== "undefined") {
+          // Notify other tabs/components (Dashboard) to refresh
+          window.dispatchEvent(
+            new CustomEvent("orders:changed", {
+              detail: { id: orderId, status: next },
+            })
+          );
+        } else if (error) {
+          // Roll back if failed
+          setOrders((prev) =>
+            prev.map((o) =>
+              o.id === orderId ? { ...o, status: (o as any)._prevStatus || o.status } : o
+            )
+          );
+          console.error("Status update failed:", error.message);
+        }
+      });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -257,8 +283,17 @@ export default function OrdersTable() {
       status: form.status,
       items: form.items.map((it) =>
         it.kind === "custom"
-          ? { kind: "custom", name: it.name.trim(), price: 0, qty: 1 }
-          : { kind: "product", productId: it.productId, qty: it.qty }
+          ? {
+              kind: "custom",
+              name: it.name.trim(),
+              price: Number(it.price) || 0,
+              qty: Number(it.qty) || 1,
+            }
+          : {
+              kind: "product",
+              productId: it.productId,
+              qty: it.qty,
+            }
       ),
       message: form.message.trim() ? form.message.trim() : null,
       discount: form.discount > 0 ? form.discount : 0,
@@ -284,7 +319,9 @@ export default function OrdersTable() {
 
   function orderTotal(o: Order) {
     return o.items.reduce((sum, it) => {
-      if (it.kind === "custom") return sum;
+      if (it.kind === "custom") {
+        return sum + (Number(it.price) || 0) * (Number(it.qty) || 1);
+      }
       const prod = availableProducts.find((p) => p.id === it.productId);
       return sum + (prod ? prod.price * it.qty : 0);
     }, 0);
@@ -304,7 +341,9 @@ export default function OrdersTable() {
   const baseTotal = useMemo(
     () =>
       form.items.reduce((sum, it) => {
-        if (it.kind === "custom") return sum;
+        if (it.kind === "custom") {
+          return sum + (Number(it.price) || 0) * (Number(it.qty) || 1);
+        }
         const prod = availableProducts.find((p) => p.id === (it as any).productId);
         return sum + (prod ? prod.price * (Number.isFinite(it.qty) ? it.qty : 0) : 0);
       }, 0),
@@ -382,7 +421,6 @@ export default function OrdersTable() {
         >
           <option value="Pending">Pending</option>
           <option value="Delivered">Delivered</option>
-          <option value="Completed">Completed</option>
         </select>
       ),
     },
@@ -606,7 +644,6 @@ export default function OrdersTable() {
             >
               <option value="Pending">Pending</option>
               <option value="Delivered">Delivered</option>
-              <option value="Completed">Completed</option>
             </select>
           </div>
         </div>
@@ -653,38 +690,65 @@ export default function OrdersTable() {
               const selected =
                 !isCustom && availableProducts.find((p) => p.id === (it as any).productId);
               return (
-                // Removed the first column (kind <select>); adjust spans
                 <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start">
                   {isCustom ? (
                     <>
-                      {/* Custom description spans more columns now */}
-                      <div className="md:col-span-10">
-                        <input
-                          type="text"
-                          placeholder="Custom note / item description"
-                          value={it.name}
-                          onChange={(e) => setItem(idx, { name: e.target.value })}
-                          className="w-full rounded-md border border-black/10 dark:border-white/15 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
-                          required
-                        />
-                      </div>
-                      <div className="md:col-span-2 flex items-center justify-end">
-                        {form.items.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeItemRow(idx)}
-                            className="rounded-md border border-red-300 text-red-600 px-2 py-1 text-xs hover:bg-red-50 dark:border-red-400/40 dark:text-red-300 dark:hover:bg-red-400/10"
-                            aria-label="Remove item"
-                          >
-                            Remove
-                          </button>
-                        )}
+                      <div className="md:col-span-12 flex flex-col gap-2 md:grid md:grid-cols-12 md:gap-2">
+                        <div className="flex gap-2 md:col-span-9">
+                          <input
+                            type="text"
+                            placeholder="Custom item / description"
+                            value={it.name}
+                            onChange={(e) => setItem(idx, { name: e.target.value })}
+                            className="flex-1 rounded-md border border-black/10 dark:border-white/15 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+                            required
+                          />
+                          <input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={(it as any).price}
+                            onChange={(e) =>
+                              setItem(idx, { price: Number(e.target.value || 0) } as any)
+                            }
+                            className="w-24 rounded-md border border-black/10 dark:border-white/15 bg-transparent px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+                            placeholder="Price"
+                            required
+                          />
+                          <input
+                            type="number"
+                            min={1}
+                            value={(it as any).qty}
+                            onChange={(e) =>
+                              setItem(idx, {
+                                qty: Math.max(1, Number.parseInt(e.target.value || "1", 10)),
+                              })
+                            }
+                            className="w-16 rounded-md border border-black/10 dark:border-white/15 bg-transparent px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+                            placeholder="Qty"
+                            required
+                          />
+                        </div>
+                        <div className="flex items-center justify-between md:justify-end gap-2 md:col-span-3">
+                          <span className="text-xs text-gray-600 dark:text-gray-400">
+                            {inr.format(((it as any).price || 0) * ((it as any).qty || 1))}
+                          </span>
+                          {form.items.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeItemRow(idx)}
+                              className="rounded-md border border-red-300 text-red-600 px-2 py-1 text-xs hover:bg-red-50 dark:border-red-400/40 dark:text-red-300 dark:hover:bg-red-400/10"
+                              aria-label="Remove custom item"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </>
                   ) : (
                     <>
                       <div className="md:col-span-12 flex flex-col gap-2 md:grid md:grid-cols-12 md:gap-2">
-                        {/* Product + Qty on ONE row for mobile */}
                         <div className="flex gap-2 md:col-span-9">
                           <div className="flex-1">
                             <AsyncSelect
@@ -734,7 +798,6 @@ export default function OrdersTable() {
                             />
                           </div>
                         </div>
-                        {/* Line total + Remove (wraps under on mobile) */}
                         <div className="flex items-center justify-between md:justify-end gap-2 md:col-span-3">
                           <span className="text-xs text-gray-600 dark:text-gray-400">
                             {selected ? inr.format(selected.price * it.qty) : "-"}

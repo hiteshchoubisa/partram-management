@@ -11,11 +11,11 @@ type Order = {
   id: string;
   client: string;
   order_date: string; // DB column
-  status?: string | null;
+  status?: "Pending" | "Delivered" | null;
   items?: any;
 };
 
-const STATUS_TABS = ["Pending", "Delivered", "Completed"] as const;
+const STATUS_TABS = ["Pending", "Delivered"] as const;
 type OrderStatusTab = typeof STATUS_TABS[number];
 
 export default function DashboardPage() {
@@ -26,7 +26,6 @@ export default function DashboardPage() {
   const [statusOrders, setStatusOrders] = useState<Record<OrderStatusTab, Order[]>>({
     Pending: [],
     Delivered: [],
-    Completed: [],
   });
   const [statusLoading, setStatusLoading] = useState(true);
   const [statusErr, setStatusErr] = useState<string | null>(null);
@@ -34,6 +33,40 @@ export default function DashboardPage() {
   useEffect(() => {
     void loadUpcomingOrders();
     void loadStatusOrders();
+  }, []);
+
+  useEffect(() => {
+    // Listen for manual broadcast from Orders table actions
+    function handleOrdersChanged() {
+      loadStatusOrders();
+    }
+    window.addEventListener("orders:changed", handleOrdersChanged);
+    return () => window.removeEventListener("orders:changed", handleOrdersChanged);
+  }, []);
+
+  useEffect(() => {
+    // Supabase Realtime subscription (auto refresh on DB changes)
+    const channel = supabase
+      .channel("orders_dashboard_status")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders" },
+        (payload: any) => {
+          const newStatus = payload.new?.status;
+            const oldStatus = payload.old?.status;
+            const needs =
+              STATUS_TABS.includes(newStatus) ||
+              STATUS_TABS.includes(oldStatus);
+          if (needs) {
+            loadStatusOrders();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   async function loadUpcomingOrders() {
@@ -64,18 +97,17 @@ export default function DashboardPage() {
       const { data, error } = await supabase
         .from("orders")
         .select("id, client, order_date, status")
-        .in("status", STATUS_TABS as any)
+        .or(`status.is.null,status.in.(${STATUS_TABS.join(",")})`)
         .order("order_date", { ascending: true });
       if (error) throw error;
 
       const map: Record<OrderStatusTab, Order[]> = {
         Pending: [],
         Delivered: [],
-        Completed: [],
       };
       (data as Order[]).forEach(o => {
-        const st = (o.status || "Pending") as OrderStatusTab;
-        if (map[st]) map[st].push(o);
+        const st = (o.status === "Delivered" ? "Delivered" : "Pending") as OrderStatusTab;
+        map[st].push(o);
       });
       setStatusOrders(map);
     } catch (e: any) {
@@ -90,8 +122,6 @@ export default function DashboardPage() {
     switch (s) {
       case "Delivered":
         return "border-green-300 text-green-700";
-      case "Completed":
-        return "border-blue-300 text-blue-700";
       default:
         return "border-amber-300 text-amber-700";
     }
