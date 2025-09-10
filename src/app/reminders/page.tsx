@@ -254,7 +254,7 @@ export default function RemindersPage() {
     }
   }
 
-  // Add: order history helper (used by OrderHistoryDialog)
+ 
   function historyForClient(clientName: string): Order[] {
     const key = clientName.trim().toLowerCase();
     return orders

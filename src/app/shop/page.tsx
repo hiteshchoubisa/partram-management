@@ -42,13 +42,17 @@ const selectStyles = {
 
 async function loadClientOptions(input: string) {
   const term = input.trim();
-  let q = supabase.from("clients").select("name,phone").order("name", { ascending: true }).limit(25);
-  if (term) q = q.ilike("name", `%${term}%`);
+  let q = supabase.from("clients").select("name,phone,address").order("name", { ascending: true }).limit(25);
+  if (term) {
+    q = q.or(
+      `name.ilike.%${term}%,phone.ilike.%${term}%,address.ilike.%${term}%`
+    );
+  }
   const { data } = await q;
   return (data || []).map((c: any) => ({
     value: c.name,
     label: c.name,
-    hint: c.phone || undefined,
+    hint: c.phone || c.address || undefined,
   }));
 }
 
@@ -63,7 +67,7 @@ export default function ShopPage() {
   const [cartOpen, setCartOpen] = useState(false);
 
   // Clients for order
-  const [clients, setClients] = useState<{ name: string; phone?: string | null }[]>([]);
+  const [clients, setClients] = useState<{ name: string; address?: string | null; phone?: string | null }[]>([]);
   const [selectedClient, setSelectedClient] = useState<string>("");
 
   useEffect(() => {
@@ -73,7 +77,7 @@ export default function ShopPage() {
           .from("products")
           .select("id,name,price,mrp,category,description,photo_url,created_at")
           .order("created_at", { ascending: false }),
-        supabase.from("clients").select("name,phone").order("name", { ascending: true }),
+        supabase.from("clients").select("name,phone,address").order("name", { ascending: true }),
       ]);
 
       if (!error && data) {
@@ -90,7 +94,7 @@ export default function ShopPage() {
         );
       }
       if (!clientsRes.error && clientsRes.data) {
-        setClients((clientsRes.data as any[]).map((c) => ({ name: c.name, phone: c.phone ?? null })));
+        setClients((clientsRes.data as any[]).map((c) => ({ name: c.name, address: c.address ?? null,  phone: c.phone ?? null })));
       }
       setLoading(false);
     })();
@@ -357,7 +361,7 @@ export default function ShopPage() {
             defaultOptions={clients.slice(0, 50).map((c) => ({
               value: c.name,
               label: c.name,
-              hint: c.phone || undefined,
+              hint: c.phone || c.address || undefined,
             }))}
             loadOptions={loadClientOptions}
             value={

@@ -54,7 +54,7 @@ type FormState = {
   discount: number;
 };
 
-type Client = { id: string; name: string; phone?: string | null };
+type Client = { id: string; name: string; address?: string | null; phone?: string | null };
 
 const newId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
@@ -102,7 +102,7 @@ export default function OrdersTable() {
       const [prodRes, ordRes, cliRes] = await Promise.all([
         supabase.from("products").select("id,name,price,mrp,category,description,photo_url"),
         supabase.from("orders").select("*").order("created_at", { ascending: false }),
-        supabase.from("clients").select("id,name,phone").order("name", { ascending: true }),
+        supabase.from("clients").select("id,name,phone,address").order("name", { ascending: true }),
       ]);
 
       if (!prodRes.error && prodRes.data) {
@@ -124,7 +124,7 @@ export default function OrdersTable() {
       }
 
       if (!cliRes.error && cliRes.data) {
-        setClients((cliRes.data as any[]).map((c) => ({ id: c.id, name: c.name, phone: c.phone ?? null })));
+        setClients((cliRes.data as any[]).map((c) => ({ id: c.id, name: c.name, address: c.address ?? null, phone: c.phone ?? null })));
       }
     })();
   }, []);
@@ -360,9 +360,18 @@ export default function OrdersTable() {
   const loadClientOptions = (input: string): Promise<RSOption[]> => {
     const q = input.trim().toLowerCase();
     const opts = clients
-      .filter((c) => !q || c.name.toLowerCase().includes(q) || (c.phone ?? "").toLowerCase().includes(q))
+      .filter((c) =>
+        !q ||
+        c.name.toLowerCase().includes(q) ||
+        (c.phone ?? "").toLowerCase().includes(q) ||
+        (c.address ?? "").toLowerCase().includes(q)  
+      )
       .slice(0, 100)
-      .map((c) => ({ value: c.name, label: c.name, hint: c.phone ?? undefined }));
+      .map((c) => ({
+        value: c.name,
+        label: c.name,
+        hint: [c.phone, c.address].filter(Boolean).join(" • ") || undefined, 
+      }));
     return Promise.resolve(opts);
   };
 
