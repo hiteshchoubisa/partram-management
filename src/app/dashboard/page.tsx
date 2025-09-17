@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import ManagementLayout from "../../components/ManagementLayout";
 import { supabase } from "../../lib/supabaseClient";
 import { formatDateTimeLabel } from "../../components/DateTimePicker";
-import Link from "next/link";
 import MonthlySalesWidget from "../../components/MonthlySalesWidget";
 
 type Order = {
@@ -15,6 +14,13 @@ type Order = {
   items?: any;
 };
 
+type Client = {
+  id: string;
+  name: string;
+  address?: string | null;
+  phone?: string | null;
+};
+
 const STATUS_TABS = ["Pending", "Delivered"] as const;
 type OrderStatusTab = typeof STATUS_TABS[number];
 
@@ -22,6 +28,9 @@ export default function DashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersErr, setOrdersErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const [clients, setClients] = useState<Client[]>([]);
+
   const [statusTab, setStatusTab] = useState<OrderStatusTab>("Pending");
   const [statusOrders, setStatusOrders] = useState<Record<OrderStatusTab, Order[]>>({
     Pending: [],
@@ -31,12 +40,12 @@ export default function DashboardPage() {
   const [statusErr, setStatusErr] = useState<string | null>(null);
 
   useEffect(() => {
+    void loadClients();
     void loadUpcomingOrders();
     void loadStatusOrders();
   }, []);
 
   useEffect(() => {
-    // Listen for manual broadcast from Orders table actions
     function handleOrdersChanged() {
       loadStatusOrders();
     }
@@ -45,7 +54,6 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    // Supabase Realtime subscription (auto refresh on DB changes)
     const channel = supabase
       .channel("orders_dashboard_status")
       .on(
@@ -53,10 +61,10 @@ export default function DashboardPage() {
         { event: "*", schema: "public", table: "orders" },
         (payload: any) => {
           const newStatus = payload.new?.status;
-            const oldStatus = payload.old?.status;
-            const needs =
-              STATUS_TABS.includes(newStatus) ||
-              STATUS_TABS.includes(oldStatus);
+          const oldStatus = payload.old?.status;
+          const needs =
+            STATUS_TABS.includes(newStatus) ||
+            STATUS_TABS.includes(oldStatus);
           if (needs) {
             loadStatusOrders();
           }
@@ -68,6 +76,16 @@ export default function DashboardPage() {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  async function loadClients() {
+    const { data, error } = await supabase
+      .from("clients")
+      .select("id, name, address, phone")
+      .order("name", { ascending: true });
+    if (!error && data) {
+      setClients(data as Client[]);
+    }
+  }
 
   async function loadUpcomingOrders() {
     try {
@@ -105,7 +123,7 @@ export default function DashboardPage() {
         Pending: [],
         Delivered: [],
       };
-      (data as Order[]).forEach(o => {
+      (data as Order[]).forEach((o) => {
         const st = (o.status === "Delivered" ? "Delivered" : "Pending") as OrderStatusTab;
         map[st].push(o);
       });
@@ -127,6 +145,11 @@ export default function DashboardPage() {
     }
   }
 
+  function getClientAddress(clientName: string) {
+    const c = clients.find((cl) => cl.name === clientName);
+    return c?.address || null;
+  }
+
   return (
     <ManagementLayout title="Dashboard">
       <section className="mb-8">
@@ -138,7 +161,7 @@ export default function DashboardPage() {
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold">Orders by Status</h2>
           <div className="flex gap-2">
-            {STATUS_TABS.map(st => {
+            {STATUS_TABS.map((st) => {
               const count = statusOrders[st]?.length || 0;
               const active = statusTab === st;
               return (
@@ -172,10 +195,16 @@ export default function DashboardPage() {
           <p className="text-sm opacity-70">No {statusTab.toLowerCase()} orders.</p>
         ) : (
           <ul className="divide-y divide-black/10 dark:divide-white/10">
-            {statusOrders[statusTab].map(o => (
+            {statusOrders[statusTab].map((o) => (
               <li key={o.id} className="py-3 flex items-center justify-between">
                 <div>
                   <p className="font-medium">{o.client}</p>
+                  {/* ✅ Show client address under name */}
+                  {getClientAddress(o.client) ? (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {getClientAddress(o.client)}
+                    </p>
+                  ) : null}
                   <p className="text-xs text-gray-600 dark:text-gray-400">
                     {formatDateTimeLabel(o.order_date)}
                   </p>
@@ -193,8 +222,6 @@ export default function DashboardPage() {
           </ul>
         )}
       </section>
-
-      
     </ManagementLayout>
   );
 }

@@ -407,6 +407,20 @@ export default function OrdersTable() {
   const orderColumns: Column<Order>[] = [
     { key: "client", header: "Client", accessor: (o) => o.client },
     {
+      key: "address",
+      header: "Address",
+      accessor: (o) => {
+        const client = clients.find(c => c.name === o.client);
+        return client?.address ? (
+          <span className="block max-w-[200px] truncate" title={client.address}>
+            {client.address}
+          </span>
+        ) : (
+          <span className="opacity-40 text-xs">—</span>
+        );
+      },
+    },
+    {
       key: "message",
       header: "Message",
       accessor: (o) =>
@@ -531,66 +545,79 @@ export default function OrdersTable() {
             </button>
           </div>
         )}
-        cardRenderer={(o) => (
-          <MobileCard
-            title={o.client}
-            subtitle={formatDateTimeLabel(o.orderDate)}
-            right={
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => openEdit(o)}
-                  className="rounded-md border border-black/10 dark:border-white/15 p-2 hover:bg-black/5 dark:hover.bg.white/10"
-                  title="Edit order"
-                  aria-label="Edit order"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDeleting(o)}
-                  className="rounded-md border border-red-300 text-red-600 p-2 hover:bg-red-50 dark:border-red-400/40 dark:text-red-300 dark:hover.bg.red-400/10"
-                  title="Delete order"
-                  aria-label="Delete order"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            }
-            rows={[
-              {
-                label: "Items",
-                value: (
-                  <div className="mt-1">
-                    {o.items && o.items.length > 0 ? renderItemsList(o) : <span className="text-xs opacity-60">—</span>}
-                  </div>
-                ),
-              },
-              o.message
-                ? {
-                    label: "Message",
-                    value: (
-                      <span className="text-xs break-words whitespace-pre-line">
-                        {o.message}
-                      </span>
-                    ),
-                  }
-                : null,
-              {
-                label: "Amount",
-                value: (
-                  <span className="text-base font-bold text-red-700" title={
-                    o.discount
-                      ? `Base: ${inr.format(orderTotal(o))}  Discount: ${inr.format(o.discount || 0)}`
-                      : undefined
-                  }>
-                    {inr.format(Math.max(0, orderTotal(o) - (o.discount || 0)))}
-                  </span>
-                ),
-              },
-            ].filter(Boolean) as any}
-          />
-        )}
+        cardRenderer={(o) => {
+          const client = clients.find(c => c.name === o.client);
+          return (
+            <MobileCard
+              title={o.client}
+              subtitle={formatDateTimeLabel(o.orderDate)}
+              right={
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openEdit(o)}
+                    className="rounded-md border border-black/10 dark:border-white/15 p-2 hover:bg-black/5 dark:hover.bg.white/10"
+                    title="Edit order"
+                    aria-label="Edit order"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleting(o)}
+                    className="rounded-md border border-red-300 text-red-600 p-2 hover:bg-red-50 dark:border-red-400/40 dark:text-red-300 dark:hover.bg.red-400/10"
+                    title="Delete order"
+                    aria-label="Delete order"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              }
+              rows={[
+                {
+                  label: "Address",
+                  value: client?.address ? (
+                    <span className="text-xs break-words">
+                      {client.address}
+                    </span>
+                  ) : (
+                    <span className="text-xs opacity-60">—</span>
+                  ),
+                },
+                {
+                  label: "Items",
+                  value: (
+                    <div className="mt-1">
+                      {o.items && o.items.length > 0 ? renderItemsList(o) : <span className="text-xs opacity-60">—</span>}
+                    </div>
+                  ),
+                },
+                o.message
+                  ? {
+                      label: "Message",
+                      value: (
+                        <span className="text-xs break-words whitespace-pre-line">
+                          {o.message}
+                        </span>
+                      ),
+                    }
+                  : null,
+                {
+                  label: "Amount",
+                  value: (
+                    <span className="text-base font-bold text-red-700" title={
+                      o.discount
+                        ? `Base: ${inr.format(orderTotal(o))}  Discount: ${inr.format(o.discount || 0)}`
+                        : undefined
+                    }>
+                      {inr.format(Math.max(0, orderTotal(o) - (o.discount || 0)))}
+                    </span>
+                  ),
+                },
+              ].filter(Boolean) as any}
+            />
+          );
+        }}
       />
 
       <FormDialog
