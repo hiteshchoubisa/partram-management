@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import ManagementLayout from "../../components/ManagementLayout";
 import { supabase } from "../../lib/supabaseClient";
 import { formatDateTimeLabel } from "../../components/DateTimePicker";
 import MonthlySalesWidget from "../../components/MonthlySalesWidget";
+import Pagination from "../../components/ui/Pagination";
 
 type Order = {
   id: string;
@@ -38,6 +39,10 @@ export default function DashboardPage() {
   });
   const [statusLoading, setStatusLoading] = useState(true);
   const [statusErr, setStatusErr] = useState<string | null>(null);
+
+  // Pagination state for status orders
+  const [statusPage, setStatusPage] = useState(1);
+  const statusPageSize = 10;
 
   useEffect(() => {
     void loadClients();
@@ -150,6 +155,30 @@ export default function DashboardPage() {
     return c?.address || null;
   }
 
+  // Pagination logic for status orders
+  const currentStatusOrders = useMemo(() => {
+    return statusOrders[statusTab] || [];
+  }, [statusOrders, statusTab]);
+
+  const totalStatusPages = useMemo(() => {
+    return Math.max(1, Math.ceil(currentStatusOrders.length / statusPageSize));
+  }, [currentStatusOrders.length]);
+
+  const pagedStatusOrders = useMemo(() => {
+    const start = (statusPage - 1) * statusPageSize;
+    return currentStatusOrders.slice(start, start + statusPageSize);
+  }, [currentStatusOrders, statusPage]);
+
+  // Reset page when status tab changes
+  useEffect(() => {
+    setStatusPage(1);
+  }, [statusTab]);
+
+  // Clamp page when total pages change
+  useEffect(() => {
+    setStatusPage((p) => Math.min(p, totalStatusPages));
+  }, [totalStatusPages]);
+
   return (
     <ManagementLayout title="Dashboard">
       <section className="mb-8">
@@ -190,12 +219,13 @@ export default function DashboardPage() {
         ) : null}
 
         {statusLoading ? (
-          <p className="text-sm text-gray-600 dark:text-gray-400">Loading orders…</p>
-        ) : statusOrders[statusTab].length === 0 ? (
+          <p className="text-loading">Loading orders…</p>
+        ) : currentStatusOrders.length === 0 ? (
           <p className="text-sm opacity-70">No {statusTab.toLowerCase()} orders.</p>
         ) : (
-          <ul className="divide-y divide-black/10 dark:divide-white/10">
-            {statusOrders[statusTab].map((o) => (
+          <>
+            <ul className="divide-y divide-black/10 dark:divide-white/10">
+              {pagedStatusOrders.map((o) => (
               <li key={o.id} className="py-3 flex items-center justify-between">
                 <div>
                   <p className="font-medium">{o.client}</p>
@@ -205,7 +235,7 @@ export default function DashboardPage() {
                       {getClientAddress(o.client)}
                     </p>
                   ) : null}
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                  <p className="text-secondary-xs">
                     {formatDateTimeLabel(o.order_date)}
                   </p>
                 </div>
@@ -220,6 +250,19 @@ export default function DashboardPage() {
               </li>
             ))}
           </ul>
+          
+          {/* Pagination for status orders */}
+          {currentStatusOrders.length > statusPageSize && (
+            <div className="mt-4">
+              <Pagination
+                page={statusPage}
+                pageSize={statusPageSize}
+                totalItems={currentStatusOrders.length}
+                onPageChange={setStatusPage}
+              />
+            </div>
+          )}
+          </>
         )}
       </section>
     </ManagementLayout>

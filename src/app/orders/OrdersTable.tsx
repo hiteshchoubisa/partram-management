@@ -61,7 +61,83 @@ const newId = () => {
   return Math.random().toString(36).slice(2);
 };
 
+function statusBadgeClass(status?: string | null) {
+  switch (status) {
+    case "Delivered":
+      return "border-green-300 text-green-700 bg-green-50";
+    default:
+      return "border-amber-300 text-amber-700 bg-amber-50";
+  }
+}
+
 const inr = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
+
+// WhatsApp helper functions
+function toWhatsappNumber(phone?: string | null): string | null {
+  if (!phone) return null;
+  const digits = String(phone).replace(/\D/g, "");
+  if (digits.startsWith("91") && digits.length === 12) return digits;
+  if (digits.length === 10) return "91" + digits;
+  if (digits.startsWith("+91") && digits.length === 13) return "91" + digits.slice(1);
+  return digits.length >= 8 ? digits : null;
+}
+
+function buildOrderWaLink(order: Order, availableProducts: Product[], clientPhone?: string | null) {
+  const num = toWhatsappNumber(clientPhone);
+  if (!num) return null;
+
+  const total = order.items.reduce((sum, it) => {
+    if (it.kind === "custom") {
+      return sum + (Number(it.price) || 0) * (Number(it.qty) || 1);
+    }
+    const prod = availableProducts.find((p) => p.id === it.productId);
+    return sum + (prod ? prod.price * it.qty : 0);
+  }, 0);
+  
+  const discount = order.discount || 0;
+  const finalAmount = Math.max(0, total - discount);
+  
+  const itemLines = order.items
+    .map((it) => {
+      const itemName = it.kind === "custom"
+        ? it.name
+        : availableProducts.find((p) => p.id === it.productId)?.name || "";
+      const itemPrice = it.kind === "custom" 
+        ? Number(it.price) || 0 
+        : availableProducts.find((p) => p.id === it.productId)?.price || 0;
+      return `• ${itemName} (Qty: ${it.qty}) - ${inr.format(itemPrice * it.qty)}`;
+    })
+    .filter(Boolean);
+  
+    const lines = [
+      `Hi ${order.client},`,
+      `Here are your order details:`,
+      ``,
+      ...itemLines,
+      ``,
+      `----------------------------`,
+      `TOTAL: ${inr.format(total)}`,
+      discount > 0 ? `DISCOUNT: ${inr.format(discount)}` : null,
+      `FINAL AMOUNT: ${inr.format(finalAmount)}`,
+      `----------------------------`,
+      order.message ? `Note: ${order.message}` : null,
+      ``,
+      `== THANK YOU FOR YOUR ORDER! ==`
+    ].filter(Boolean);
+  const msg = lines.join("\n");
+  return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+}
+
+const WhatsAppIcon = () => (
+  <svg
+    viewBox="0 0 32 32"
+    className="h-4 w-4"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path d="M16.04 2c-7.73 0-14 6.27-14 14 0 2.47.64 4.82 1.86 6.92L2 30l7.25-1.9A13.9 13.9 0 0 0 16.04 30c7.73 0 14-6.27 14-14s-6.27-14-14-14zm0 25.5c-2.23 0-4.41-.6-6.3-1.73l-.45-.27-4.3 1.13 1.15-4.19-.29-.43A11.49 11.49 0 0 1 4.54 16c0-6.32 5.15-11.46 11.5-11.46 6.34 0 11.5 5.14 11.5 11.46 0 6.32-5.16 11.5-11.5 11.5zm6.31-8.66c-.34-.17-2.02-.99-2.33-1.1-.31-.11-.53-.17-.75.17-.22.34-.86 1.1-1.05 1.32-.19.21-.39.23-.73.06-.34-.17-1.43-.53-2.73-1.69-1.01-.9-1.69-2.02-1.89-2.36-.2-.34-.02-.52.15-.69.15-.15.34-.39.51-.58.17-.19.22-.34.34-.56.11-.23.06-.43-.03-.6-.09-.17-.75-1.8-1.03-2.47-.27-.65-.55-.56-.75-.57l-.64-.01c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48 0 1.46 1.07 2.87 1.22 3.06.15.19 2.11 3.22 5.12 4.52.72.31 1.28.5 1.72.64.72.23 1.38.2 1.9.12.58-.09 2.02-.83 2.31-1.64.29-.81.29-1.5.2-1.64-.09-.14-.31-.22-.65-.38z" />
+  </svg>
+);
 
 export default function OrdersTable() {
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
@@ -91,17 +167,49 @@ export default function OrdersTable() {
     setPage((p) => Math.min(p, totalPages));
   }, [totalPages]);
 
+  // Sort orders: pending first, then by date (newest first)
+  const sortedOrders = useMemo(() => {
+    const sorted = [...orders].sort((a, b) => {
+      // First sort by status: pending orders first
+      if (a.status === "Pending" && b.status === "Delivered") return -1;
+      if (a.status === "Delivered" && b.status === "Pending") return 1;
+      
+      // If same status, sort by date (newest first)
+      const dateA = new Date(a.orderDate);
+      const dateB = new Date(b.orderDate);
+      
+      // Handle invalid dates
+      if (isNaN(dateA.getTime()) && isNaN(dateB.getTime())) return 0;
+      if (isNaN(dateA.getTime())) return 1;
+      if (isNaN(dateB.getTime())) return -1;
+      
+      return dateB.getTime() - dateA.getTime();
+    });
+    
+    // Debug logging to verify sorting
+    if (sorted.length > 0) {
+      console.log("Sorted orders:", sorted.slice(0, 3).map(o => ({
+        client: o.client,
+        status: o.status,
+        orderDate: o.orderDate,
+        parsedDate: new Date(o.orderDate).toISOString()
+      })));
+    }
+    
+    return sorted;
+  }, [orders]);
+
   const pagedOrders = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return orders.slice(start, start + pageSize);
-  }, [orders, page]);
+    return sortedOrders.slice(start, start + pageSize);
+  }, [sortedOrders, page]);
 
   // Load products, orders, and clients from Supabase
   useEffect(() => {
     (async () => {
       const [prodRes, ordRes, cliRes] = await Promise.all([
         supabase.from("products").select("id,name,price,mrp,category,description,photo_url"),
-        supabase.from("orders").select("*").order("created_at", { ascending: false }),
+        supabase.from("orders").select("*").order("order_date", { ascending: false }),
         supabase.from("clients").select("id,name,phone,address").order("name", { ascending: true }),
       ]);
 
@@ -120,7 +228,10 @@ export default function OrdersTable() {
       }
 
       if (!ordRes.error && ordRes.data) {
-        setOrders(ordRes.data.map(mapOrderRow));
+        const mappedOrders = ordRes.data.map(mapOrderRow);
+        console.log("Raw orders from DB:", ordRes.data.slice(0, 2));
+        console.log("Mapped orders:", mappedOrders.slice(0, 2));
+        setOrders(mappedOrders);
       }
 
       if (!cliRes.error && cliRes.data) {
@@ -160,7 +271,7 @@ export default function OrdersTable() {
     return {
       id: row.id,
       client: row.client,
-      orderDate: row.order_date ?? row.orderDate,
+      orderDate: row.order_date,
       status,
       items,
       message: row.message ?? null,
@@ -499,7 +610,7 @@ export default function OrdersTable() {
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-secondary-sm">
           Manage orders. Inline status, date & time picker, and auto total.
         </p>
         <button
@@ -523,36 +634,82 @@ export default function OrdersTable() {
         columns={orderColumns}
         rowKey={(o) => o.id}
         emptyMessage='No orders yet. Click “Add Order” to create one.'
-        rowActionsRenderer={(o) => (
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              aria-label="Edit"
-              onClick={() => openEdit(o)}
-              className="rounded-md p-2 hover:bg-black/5 dark:hover:bg-white/10"
-              title="Edit"
-            >
-              <Pencil className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              aria-label="Delete"
-              onClick={() => openDelete(o)}
-              className="rounded-md p-2 hover:bg-black/5 dark:hover.bg.white/10 text-red-600 dark:text-red-400"
-              title="Delete"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        )}
+        rowActionsRenderer={(o) => {
+          const client = clients.find(c => c.name === o.client);
+          const waLink = buildOrderWaLink(o, availableProducts, client?.phone);
+          return (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => waLink && window.open(waLink, "_blank", "noopener,noreferrer")}
+                disabled={!waLink}
+                className={`rounded-md p-2 flex items-center justify-center ${
+                  waLink
+                    ? "hover:bg-black/5 dark:hover:bg-white/10 text-green-600"
+                    : "opacity-50 cursor-not-allowed"
+                }`}
+                title={waLink ? "Send order details via WhatsApp" : "Missing/invalid phone number"}
+                aria-label="Send WhatsApp"
+              >
+                <WhatsAppIcon />
+              </button>
+              <button
+                type="button"
+                aria-label="Edit"
+                onClick={() => openEdit(o)}
+                className="rounded-md p-2 hover:bg-black/5 dark:hover:bg-white/10"
+                title="Edit"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Delete"
+                onClick={() => openDelete(o)}
+                className="rounded-md p-2 hover:bg-black/5 dark:hover.bg.white/10 text-red-600 dark:text-red-400"
+                title="Delete"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          );
+        }}
         cardRenderer={(o) => {
           const client = clients.find(c => c.name === o.client);
+          const waLink = buildOrderWaLink(o, availableProducts, client?.phone);
           return (
             <MobileCard
-              title={o.client}
+              title={
+                <div className="flex items-center gap-2">
+                  <span>{o.client}</span>
+                  <span
+                    className={
+                      "inline-flex items-center rounded-md border px-2 py-0.5 text-xs " +
+                      statusBadgeClass(o.status)
+                    }
+                  >
+                    {o.status || "Pending"}
+                  </span>
+                </div>
+              }
               subtitle={formatDateTimeLabel(o.orderDate)}
               right={
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => waLink && window.open(waLink, "_blank", "noopener,noreferrer")}
+                    disabled={!waLink}
+                    className={`rounded-md border px-2 py-1 text-xs flex items-center justify-center gap-1 ${
+                      waLink
+                        ? "border-black/10 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/10 text-green-600"
+                        : "border-black/10 dark:border-white/15 opacity-50 cursor-not-allowed"
+                    }`}
+                    title={waLink ? "Send order details via WhatsApp" : "Missing/invalid phone number"}
+                    aria-label="Send WhatsApp"
+                  >
+                    <WhatsAppIcon />
+                    <span className="sr-only">WhatsApp</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => openEdit(o)}
@@ -766,7 +923,7 @@ export default function OrdersTable() {
                           />
                         </div>
                         <div className="flex items-center justify-between md:justify-end gap-2 md:col-span-3">
-                          <span className="text-xs text-gray-600 dark:text-gray-400">
+                          <span className="text-price">
                             {inr.format(((it as any).price || 0) * ((it as any).qty || 1))}
                           </span>
                           {form.items.length > 1 && (
@@ -835,7 +992,7 @@ export default function OrdersTable() {
                           </div>
                         </div>
                         <div className="flex items-center justify-between md:justify-end gap-2 md:col-span-3">
-                          <span className="text-xs text-gray-600 dark:text-gray-400">
+                          <span className="text-price">
                             {selected ? inr.format(selected.price * it.qty) : "-"}
                           </span>
                           {form.items.length > 1 && (
@@ -861,7 +1018,7 @@ export default function OrdersTable() {
         <div className="md:col-span-2 flex flex-col gap-3 border-t border-black/10 dark:border-white/10 pt-4">
           <div className="flex flex-col sm:flex-row gap-4 sm:items-end">
             <div className="flex-1">
-              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center justify-between">
+              <p className="text-secondary-sm flex items-center justify-between">
                 <span>Grand Total</span>
                 <span className="font-semibold">{inr.format(baseTotal)}</span>
               </p>
@@ -885,7 +1042,7 @@ export default function OrdersTable() {
               </div>
             </div>
             <div className="flex-1 sm:text-right">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Net Total</p>
+              <p className="text-secondary-sm">Net Total</p>
               <p className="text-lg font-bold text-red-700">
                 {inr.format(netTotal)}
               </p>

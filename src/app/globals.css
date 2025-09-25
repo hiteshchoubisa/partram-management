@@ -46,4 +46,79 @@ button{
   overflow: hidden;
   line-height: 1.4;
 }
+
+.description-text {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  padding-right: 5rem;
+}
+
+/* Small gray text for secondary information */
+.text-secondary-xs {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.text-secondary-sm {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+/* Price text styling */
+.text-price {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+/* Loading text styling */
+.text-loading {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+/* Address text styling */
+.text-address {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+/* Subtitle text styling */
+.text-subtitle {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+/* Pagination text styling */
+.text-pagination {
+  color: #6b7280;
+}
+
+/* Mobile card label styling */
+.text-mobile-label {
+  color: #6b7280;
+}
+
+@media (prefers-color-scheme: dark) {
+  .description-text {
+    color: #9ca3af;
+  }
+  
+  .text-secondary-xs,
+  .text-secondary-sm,
+  .text-price,
+  .text-loading,
+  .text-address,
+  .text-subtitle,
+  .text-pagination,
+  .text-mobile-label {
+    color: #9ca3af;
+  }
+}
  

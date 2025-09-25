@@ -233,7 +233,7 @@ export default function ClientsTable() {
 
       <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-2 w-full sm:w-auto">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-secondary-sm">
             Manage your clients. Search by name or address.
           </p>
           <input

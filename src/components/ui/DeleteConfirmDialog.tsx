@@ -30,7 +30,7 @@ export default function DeleteConfirmDialog({
       align="center"
       showClose
     >
-      <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">{message}</p>
+      <p className="text-secondary-sm mb-6">{message}</p>
       <div className="flex items-center justify-end gap-2">
         <button
           type="button"

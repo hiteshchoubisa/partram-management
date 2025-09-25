@@ -169,7 +169,7 @@ export default function ShopPage() {
         // Hide header actions on mobile to avoid duplicate buttons
         <div className="hidden sm:flex items-center gap-3">
           {products.length > 0 ? (
-            <span className="text-xs text-gray-600 dark:text-gray-400">
+            <span className="text-secondary-xs">
               {filtered.length} / {products.length}
             </span>
           ) : null}
@@ -401,7 +401,7 @@ export default function ShopPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-medium truncate">{it.name}</div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400">{inr.format(it.price)}</div>
+                    <div className="text-price">{inr.format(it.price)}</div>
                   </div>
                   <div className="flex items-center gap-2">
                     <label htmlFor={`qty-${it.productId}`} className="sr-only">Qty</label>

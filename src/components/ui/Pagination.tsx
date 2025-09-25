@@ -20,7 +20,7 @@ export default function Pagination({ page, pageSize, totalItems, onPageChange, c
 
   return (
     <div className={`mb-3 flex items-center justify-between text-sm ${className ?? ""}`}>
-      <span className="text-gray-600 dark:text-gray-400">
+      <span className="text-pagination">
         Showing {start}–{end} of {totalItems}
       </span>
       <div className="flex items-center gap-2">

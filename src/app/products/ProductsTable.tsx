@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Pencil, Trash2 } from "lucide-react";
 import DataTable, { Column } from "../../components/DataTable";
 import MobileCard from "../../components/MobileCard";
 import FormDialog from "../../components/ui/FormDialog";
@@ -308,7 +309,7 @@ export default function ProductsTable() {
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <p className="text-sm text-gray-600 dark:text-gray-400">Manage your products. Add, edit, or delete.</p>
+        <p className="text-secondary-sm">Manage your products. Add, edit, or delete.</p>
         <button
           type="button"
           onClick={openAdd}
@@ -336,27 +337,49 @@ export default function ProductsTable() {
           { label: "Delete", onClick: (p) => openDelete(p), kind: "danger" },
         ]}
         cardRenderer={(p) => (
-          <MobileCard
-            title={p.name}
-            right={
-              p.photoUrl ? (
-                <img
-                  src={p.photoUrl}
-                  alt={p.name}
-                  className="absolute top-[10px] right-[10px] w-20 rounded-md object-cover border border-black/10 dark:border-white/15"
-                />
-              ) : undefined
-            }
-            rows={[
-              { label: "Price", value: inr.format(p.price) },
-              { label: "MRP", value: typeof p.mrp === "number" && p.mrp > p.price ? inr.format(p.mrp) : "-" },
-              ...(p.category ? [{ label: "Category", value: p.category }] : []),
-            ]}
-          >
-            {p.description ? (
-              <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 line-clamp-3">{p.description}</p>
-            ) : null}
-          </MobileCard>
+          <div className="relative">
+            {p.photoUrl && (
+              <img
+                src={p.photoUrl}
+                alt={p.name}
+                className="absolute top-15 right-1 w-16 h-16 rounded-md object-cover border border-black/10 dark:border-white/15 z-20"
+              />
+            )}
+            <MobileCard
+              title={p.name}
+              right={
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => openEdit(p)}
+                    className="rounded-md border border-black/10 dark:border-white/15 p-2 hover:bg-black/5 dark:hover:bg-white/10"
+                    title="Edit product"
+                    aria-label="Edit product"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openDelete(p)}
+                    className="rounded-md border border-red-300 text-red-600 p-2 hover:bg-red-50 dark:border-red-400/40 dark:text-red-300 dark:hover:bg-red-400/10"
+                    title="Delete product"
+                    aria-label="Delete product"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              }
+              rows={[
+                { label: "Price", value: inr.format(p.price) },
+                { label: "MRP", value: typeof p.mrp === "number" && p.mrp > p.price ? inr.format(p.mrp) : "-" },
+                ...(p.category ? [{ label: "Category", value: p.category }] : []),
+              ]}
+            >
+              {p.description ? (
+                <p className="description-text">{p.description}</p>
+              ) : null}
+            </MobileCard>
+          </div>
         )}
       />
 

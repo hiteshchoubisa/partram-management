@@ -27,7 +27,7 @@ export default function ManagementLayout({
             <div>
               <h1 className="text-xl font-semibold">{title}</h1>
               {subtitle ? (
-                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{subtitle}</p>
+                <p className="text-subtitle">{subtitle}</p>
               ) : null}
             </div>
             {actions ? <div className="flex items-center gap-2">{actions}</div> : null}

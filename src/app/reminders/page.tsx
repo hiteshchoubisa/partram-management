@@ -15,6 +15,7 @@ type Client = {
   id: string;
   name: string;
   phone?: string | null;
+  address?: string | null;
 };
 
 type Order = {
@@ -87,6 +88,7 @@ type ReminderRow = {
   clientId: string;
   clientName: string;
   phone?: string | null;
+  address?: string | null;
   lastOrderAt?: string | null;
   everyDays: number;
   lastRemindedAt?: string | null;
@@ -154,7 +156,7 @@ export default function RemindersPage() {
         const sinceIso = new Date(Date.now() - 1000 * 60 * 60 * 24 * 365).toISOString(); // last 1 year
 
         const [cRes, oRes] = await Promise.all([
-          supabase.from("clients").select("id,name,phone").order("name", { ascending: true }),
+          supabase.from("clients").select("id,name,phone,address").order("name", { ascending: true }),
           supabase
             .from("orders")
             .select("id,client,order_date")
@@ -186,7 +188,7 @@ export default function RemindersPage() {
     (async () => {
       try {
         const [cRes, oRes, pRes] = await Promise.all([
-          supabase.from("clients").select("id,name,phone"),
+          supabase.from("clients").select("id,name,phone,address"),
           supabase.from("orders").select("id,client,order_date"),
           supabase.from("client_reminders").select("client_id,every_days,last_reminded_at"),
         ]);
@@ -333,6 +335,7 @@ export default function RemindersPage() {
         clientId: c.id,
         clientName: c.name,
         phone: c.phone ?? null,
+        address: c.address ?? null,
         lastOrderAt,
         everyDays,
         lastRemindedAt,
@@ -417,14 +420,21 @@ export default function RemindersPage() {
         key: "client",
         header: "Client",
         accessor: (r) => (
-          <button
-            type="button"
-            onClick={() => setHistoryModalFor(r.clientName)}
-            className="text-left text-blue-600 hover:underline"
-            title="View order history"
-          >
-            {r.clientName}
-          </button>
+          <div className="text-left">
+            <button
+              type="button"
+              onClick={() => setHistoryModalFor(r.clientName)}
+              className="text-blue-600 hover:underline"
+              title="View order history"
+            >
+              {r.clientName}
+            </button>
+            {r.address && (
+              <div className="text-address">
+                {r.address}
+              </div>
+            )}
+          </div>
         ),
       },
       {
@@ -600,7 +610,7 @@ export default function RemindersPage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-gray-600 dark:text-gray-400">Loading…</p>
+        <p className="text-loading">Loading…</p>
       ) : err ? (
         <div className="mb-3 rounded-md border border-red-300 text-red-700 bg-red-50 px-3 py-2 text-sm">
           {err}
@@ -645,14 +655,21 @@ export default function RemindersPage() {
                   <MobileCard
                     key={r.clientId}
                     title={/* unchanged */ (
-                      <button
-                        type="button"
-                        onClick={() => setHistoryModalFor(r.clientName)}
-                        className="text-left hover:underline"
-                        title="View order history"
-                      >
-                        {r.clientName}
-                      </button>
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => setHistoryModalFor(r.clientName)}
+                          className="text-left hover:underline"
+                          title="View order history"
+                        >
+                          {r.clientName}
+                        </button>
+                        {r.address && (
+                          <div className="text-address">
+                            {r.address}
+                          </div>
+                        )}
+                      </div>
                     )}
                     subtitle={
                       <span className="text-blue-600 font-medium">
