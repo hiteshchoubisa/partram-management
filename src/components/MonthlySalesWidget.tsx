@@ -106,7 +106,7 @@ export default function MonthlySalesWidget({ variant = "simple" }: Props) {
   const currentTotal = monthTotals.at(-1)?.total ?? 0;
 
   return (
-    <div className="rounded-lg border border-black/10 dark:border-white/15 p-4 bg-white dark:bg-zinc-900">
+    <div className="rounded-lg border border-black/10  p-4 bg-white ">
       <div className="flex items-start justify-between">
         <div>
           <h3 className="text-sm font-semibold">Monthly Sales</h3>
@@ -125,7 +125,7 @@ export default function MonthlySalesWidget({ variant = "simple" }: Props) {
             return (
               <div key={m.key} className="flex flex-col items-center flex-1">
                 <div
-                  className="w-full rounded-t-md bg-blue-500/70 dark:bg-blue-400/70 transition-all"
+                  className="w-full rounded-t-md bg-blue-500/70  transition-all"
                   style={{ height: h + "px" }}
                   title={`${monthLabel(m.key)}: ${inr.format(m.total)}`}
                 />

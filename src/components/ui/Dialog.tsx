@@ -68,7 +68,7 @@ export default function Dialog({
       }}
     >
       <div
-        className={`w-full ${sizeMap[size]} rounded-lg bg-white p-6 shadow-lg dark:bg-zinc-900 max-h-[calc(100vh-2rem)] md:max-h-[calc(100vh-4rem)] overflow-y-auto overscroll-contain ${panelClassName ?? ""}`}
+        className={`w-full ${sizeMap[size]} rounded-lg bg-white p-6 shadow-lg  max-h-[calc(100vh-2rem)] md:max-h-[calc(100vh-4rem)] overflow-y-auto overscroll-contain ${panelClassName ?? ""}`}
       >
         {(title || showClose) && (
           <div className="flex items-center justify-between mb-4 flex-wrap gap-3">

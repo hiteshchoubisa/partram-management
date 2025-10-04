@@ -58,7 +58,7 @@ export default function Header() {
   };
 
   return (
-    <header className="header-bg w-full p-4 border-b border-zinc-200 dark:border-zinc-800">
+    <header className="header-bg w-full p-4 border-b border-zinc-200 ">
       <div className="h-10 flex justify-between items-center">
         <Link href="/dashboard" className="flex items-center gap-2" prefetch>
           <Image
@@ -91,12 +91,12 @@ export default function Header() {
             ))}
           {user && (
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600 dark:text-gray-400">
+              <span className="text-sm text-gray-600 ">
                 {user.email}
               </span>
               <button
                 onClick={handleSignOut}
-                className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                className="text-sm text-red-600 hover:text-red-700  "
               >
                 Sign Out
               </button>
@@ -107,7 +107,7 @@ export default function Header() {
         {/* Mobile menu button */}
         <button
           type="button"
-          className="md:hidden inline-flex items-center justify-center rounded-md p-2 text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          className="md:hidden inline-flex items-center justify-center rounded-md p-2 text-foreground hover:bg-zinc-100 "
           aria-label="Toggle menu"
           aria-controls="mobile-drawer"
           aria-expanded={open}
@@ -149,18 +149,18 @@ export default function Header() {
         />
         {/* Panel */}
         <aside
-          className={`absolute right-0 top-0 h-full w-72 bg-white dark:bg-zinc-900 shadow-lg transform transition-transform ${
+          className={`absolute right-0 top-0 h-full w-72 bg-white  shadow-lg transform transition-transform ${
             open ? "translate-x-0" : "translate-x-full"
           }`}
           role="dialog"
           aria-modal="true"
           aria-label="Main menu"
         >
-          <div className="flex items-center justify-between h-16 px-4 border-b border-zinc-200 dark:border-zinc-800">
+          <div className="flex items-center justify-between h-16 px-4 border-b border-zinc-200 ">
             <span className="font-semibold">Menu</span>
             <button
               type="button"
-              className="rounded-md p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              className="rounded-md p-2 hover:bg-zinc-100 "
               aria-label="Close menu"
               onClick={() => setOpen(false)}
             >
@@ -183,14 +183,14 @@ export default function Header() {
                   }}
                   onClick={() => setOpen(false)}
                   aria-current={isActive(item.href) ? "page" : undefined}
-                  className={`block rounded px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 ${isActive(item.href) ? "font-medium underline underline-offset-4" : ""}`}
+                  className={`block rounded px-3 py-2 text-sm hover:bg-zinc-100  ${isActive(item.href) ? "font-medium underline underline-offset-4" : ""}`}
                 >
                   {item.label}
                 </Link>
               ))}
             {user && (
-              <div className="border-t border-zinc-200 dark:border-zinc-800 pt-3 mt-3">
-                <div className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400">
+              <div className="border-t border-zinc-200  pt-3 mt-3">
+                <div className="px-3 py-2 text-sm text-gray-600 ">
                   {user.email}
                 </div>
                 <button
@@ -198,7 +198,7 @@ export default function Header() {
                     handleSignOut();
                     setOpen(false);
                   }}
-                  className="block w-full text-left px-3 py-2 text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
+                  className="block w-full text-left px-3 py-2 text-sm text-red-600 hover:text-red-700   hover:bg-zinc-100  rounded"
                 >
                   Sign Out
                 </button>
