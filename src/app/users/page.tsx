@@ -26,9 +26,9 @@ function UsersContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const addDialog = useDialog();
-  const editDialog = useDialog();
-  const deleteDialog = useDialog();
+  const addDialog = useDialog<void>();
+  const editDialog = useDialog<User>();
+  const deleteDialog = useDialog<User>();
 
   const addForm = useForm({
     name: "",
@@ -69,7 +69,7 @@ function UsersContent() {
 
   const handleAdd = () => {
     addForm.reset();
-    addDialog.open();
+    addDialog.show();
   };
 
   const handleEdit = (user: User) => {
@@ -79,11 +79,11 @@ function UsersContent() {
       phone: user.phone,
       role: user.role,
     });
-    editDialog.open(user);
+    editDialog.show(user);
   };
 
   const handleDelete = (user: User) => {
-    deleteDialog.open(user);
+    deleteDialog.show(user);
   };
 
   const handleAddSubmit = async () => {
@@ -100,7 +100,7 @@ function UsersContent() {
 
       if (error) throw error;
       
-      addDialog.close();
+      addDialog.hide();
       addForm.reset();
       fetchUsers();
     } catch (err) {
@@ -125,7 +125,7 @@ function UsersContent() {
 
       if (error) throw error;
       
-      editDialog.close();
+      editDialog.hide();
       editForm.reset();
       fetchUsers();
     } catch (err) {
@@ -144,7 +144,7 @@ function UsersContent() {
 
       if (error) throw error;
       
-      deleteDialog.close();
+      deleteDialog.hide();
       fetchUsers();
     } catch (err) {
       setError("Failed to delete user");
@@ -199,7 +199,7 @@ function UsersContent() {
         columns={columns}
         rows={users}
         rowKey={(user, index) => user.id}
-        mobileCard={(user, index) => (
+        cardRenderer={(user) => (
           <div key={user.id} className="bg-white  rounded-lg shadow p-4">
             <MobileCard
               title={user.name}
@@ -240,10 +240,10 @@ function UsersContent() {
       {/* Add User Dialog */}
       <FormDialog
         open={addDialog.open}
-        onClose={addDialog.close}
+        onClose={addDialog.hide}
         title="Add New User"
         onSubmit={handleAddSubmit}
-        submitText="Add User"
+        submitLabel="Add User"
       >
         <div className="space-y-4">
           <div>
@@ -313,10 +313,10 @@ function UsersContent() {
       {/* Edit User Dialog */}
       <FormDialog
         open={editDialog.open}
-        onClose={editDialog.close}
+        onClose={editDialog.hide}
         title="Edit User"
         onSubmit={handleEditSubmit}
-        submitText="Update User"
+        submitLabel="Update User"
       >
         <div className="space-y-4">
           <div>
@@ -374,7 +374,7 @@ function UsersContent() {
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmDialog
         open={deleteDialog.open}
-        onClose={deleteDialog.close}
+        onCancel={deleteDialog.hide}
         onConfirm={handleDeleteConfirm}
         title="Delete User"
         message={`Are you sure you want to delete user "${deleteDialog.data?.name}"? This action cannot be undone.`}
