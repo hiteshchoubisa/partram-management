@@ -200,8 +200,7 @@ function UsersContent() {
         rows={users}
         rowKey={(user, index) => user.id}
         cardRenderer={(user) => (
-          <div key={user.id} className="bg-white  rounded-lg shadow p-4">
-            <MobileCard
+          <MobileCard
               title={user.name}
               subtitle={user.email}
               rows={[
@@ -233,7 +232,6 @@ function UsersContent() {
                 </button>
               </div>
             </MobileCard>
-          </div>
         )}
       />
 
