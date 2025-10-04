@@ -194,7 +194,7 @@ export default function ShopPage() {
             className={`rounded-full border px-3 py-1 text-sm ${
               selected === "All"
                 ? "bg-foreground text-background"
-                : "border-black/10 dark:border-white/15 hover:bg-black/[.04] dark:hover:bg-white/[.06]"
+                : "border-black/10  hover:bg-black/[.04] dark:hover:bg-white/[.06]"
             }`}
           >
             All
@@ -207,7 +207,7 @@ export default function ShopPage() {
               className={`rounded-full border px-3 py-1 text-sm ${
                 selected === c
                   ? "bg-foreground text-background"
-                  : "border-black/10 dark:border-white/15 hover:bg-black/[.04] dark:hover:bg-white/[.06]"
+                  : "border-black/10  hover:bg-black/[.04] dark:hover:bg-white/[.06]"
               }`}
             >
               {c}
@@ -218,7 +218,7 @@ export default function ShopPage() {
           <select
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
-            className="w-full rounded-md border border-black/10 dark:border-white/15 bg-transparent px-3 py-2 text-sm"
+            className="w-full rounded-md border border-black/10  bg-transparent px-3 py-2 text-sm"
           >
             <option value="All">All</option>
             {categories.map((c) => (
@@ -237,17 +237,17 @@ export default function ShopPage() {
       ) : (
         <>
           {/* Mobile: List view */}
-          <ul className="sm:hidden divide-y divide-black/10 dark:divide-white/10 rounded-lg border border-black/10 dark:border-white/15 bg-white dark:bg-zinc-900">
+          <ul className="sm:hidden divide-y divide-black/10  rounded-lg border border-black/10  bg-white ">
             {filtered.map((p) => (
               <li key={p.id} className="p-3">
                 <div className="flex items-center gap-3">
-                  <div className="h-16 w-16 rounded bg-zinc-100 dark:bg-zinc-800 overflow-hidden flex-shrink-0">
+                  <div className="h-16 w-16 rounded bg-zinc-100  overflow-hidden flex-shrink-0">
                     {p.photoUrl ? (
                       <img src={p.photoUrl} alt={p.name} className="h-full w-full object-cover" loading="lazy" />
                     ) : null}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{p.category || "Uncategorized"}</div>
+                    <div className="text-xs text-gray-500 ">{p.category || "Uncategorized"}</div>
                     <div className="font-medium truncate">{p.name}</div>
                     <div className="mt-0.5 flex items-center gap-2">
                       <span
@@ -280,9 +280,9 @@ export default function ShopPage() {
             {filtered.map((p) => (
               <div
                 key={p.id}
-                className="rounded-lg border border-black/10 dark:border-white/15 overflow-hidden bg-white dark:bg-zinc-900"
+                className="rounded-lg border border-black/10  overflow-hidden bg-white "
               >
-                <div className="aspect-[4/3] bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                <div className="aspect-[4/3] bg-zinc-100  overflow-hidden">
                   {p.photoUrl ? (
                     <img src={p.photoUrl} alt={p.name} className="h-full w-full object-cover" loading="lazy" />
                   ) : (
@@ -290,7 +290,7 @@ export default function ShopPage() {
                   )}
                 </div>
                 <div className="p-3">
-                  <div className="text-xs text-gray-500 dark:text-gray-400">{p.category || "Uncategorized"}</div>
+                  <div className="text-xs text-gray-500 ">{p.category || "Uncategorized"}</div>
                   <div className="font-medium truncate">{p.name}</div>
                   <div className="mt-1 flex items-center gap-2">
                     <span
@@ -320,7 +320,7 @@ export default function ShopPage() {
 
       {/* Mobile fixed cart bar */}
       <div className="sm:hidden">
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-black/10 dark:border-white/15 bg-white dark:bg-zinc-900 px-4 py-3 shadow-lg">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-black/10  bg-white  px-4 py-3 shadow-lg">
           <div className="flex items-center justify-between">
             <span className="text-sm">
               Cart: {cartCount} • Total: {inr.format(cartTotal)}
@@ -388,13 +388,13 @@ export default function ShopPage() {
         </div>
 
         <div className="md:col-span-2">
-          <div className="mt-3 rounded-lg border border-black/10 dark:border-white/15 divide-y">
+          <div className="mt-3 rounded-lg border border-black/10  divide-y">
             {cart.length === 0 ? (
               <div className="p-3 text-sm text-gray-500">Cart is empty</div>
             ) : (
               cart.map((it) => (
                 <div key={it.productId} className="p-3 flex items-center gap-3">
-                  <div className="h-12 w-12 rounded bg-zinc-100 dark:bg-zinc-800 overflow-hidden flex-shrink-0">
+                  <div className="h-12 w-12 rounded bg-zinc-100  overflow-hidden flex-shrink-0">
                     {it.photoUrl ? (
                       <img src={it.photoUrl} className="h-full w-full object-cover" alt={it.name} />
                     ) : null}
@@ -411,12 +411,12 @@ export default function ShopPage() {
                       min={1}
                       value={it.qty}
                       onChange={(e) => updateQty(it.productId, Number(e.target.value || 1))}
-                      className="w-16 rounded-md border border-black/10 dark:border-white/15 bg-transparent px-2 py-1 text-sm"
+                      className="w-16 rounded-md border border-black/10  bg-transparent px-2 py-1 text-sm"
                     />
                     <button
                       type="button"
                       onClick={() => removeFromCart(it.productId)}
-                      className="rounded-md border border-black/10 dark:border-white/15 px-2 py-1 text-xs hover:bg-black/[.04] dark:hover:bg-white/[.06]"
+                      className="rounded-md border border-black/10  px-2 py-1 text-xs hover:bg-black/[.04] dark:hover:bg-white/[.06]"
                     >
                       Remove
                     </button>
