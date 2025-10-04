@@ -551,7 +551,7 @@ export default function OrdersTable() {
         <select
           value={o.status}
           onChange={(e) => updateStatus(o.id, e.target.value as Order["status"])}
-          className="rounded-md border border-black/10 dark:border-white/15 bg-transparent px-2 py-1 text-xs outline-none"
+          className="rounded-md border border-black/10 bg-transparent px-2 py-1 text-xs outline-none"
         >
           <option value="Pending">Pending</option>
           <option value="Delivered">Delivered</option>
@@ -645,7 +645,7 @@ export default function OrdersTable() {
                 disabled={!waLink}
                 className={`rounded-md p-2 flex items-center justify-center ${
                   waLink
-                    ? "hover:bg-black/5 dark:hover:bg-white/10 text-green-600"
+                    ? "hover:bg-black/5 text-green-600"
                     : "opacity-50 cursor-not-allowed"
                 }`}
                 title={waLink ? "Send order details via WhatsApp" : "Missing/invalid phone number"}
@@ -657,7 +657,7 @@ export default function OrdersTable() {
                 type="button"
                 aria-label="Edit"
                 onClick={() => openEdit(o)}
-                className="rounded-md p-2 hover:bg-black/5 dark:hover:bg-white/10"
+                className="rounded-md p-2 hover:bg-black/5"
                 title="Edit"
               >
                 <Pencil className="h-4 w-4" />
@@ -666,7 +666,7 @@ export default function OrdersTable() {
                 type="button"
                 aria-label="Delete"
                 onClick={() => openDelete(o)}
-                className="rounded-md p-2 hover:bg-black/5 dark:hover.bg.white/10 text-red-600 dark:text-red-400"
+                className="rounded-md p-2 hover:bg-black/5 text-red-600"
                 title="Delete"
               >
                 <Trash2 className="h-4 w-4" />
@@ -701,8 +701,8 @@ export default function OrdersTable() {
                     disabled={!waLink}
                     className={`rounded-md border px-2 py-1 text-xs flex items-center justify-center gap-1 ${
                       waLink
-                        ? "border-black/10 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/10 text-green-600"
-                        : "border-black/10 dark:border-white/15 opacity-50 cursor-not-allowed"
+                        ? "border-black/10 hover:bg-black/5 text-green-600"
+                        : "border-black/10 opacity-50 cursor-not-allowed"
                     }`}
                     title={waLink ? "Send order details via WhatsApp" : "Missing/invalid phone number"}
                     aria-label="Send WhatsApp"
@@ -713,7 +713,7 @@ export default function OrdersTable() {
                   <button
                     type="button"
                     onClick={() => openEdit(o)}
-                    className="rounded-md border border-black/10 dark:border-white/15 p-2 hover:bg-black/5 dark:hover.bg.white/10"
+                    className="rounded-md border border-black/10 p-2 hover:bg-black/5"
                     title="Edit order"
                     aria-label="Edit order"
                   >
@@ -722,7 +722,7 @@ export default function OrdersTable() {
                   <button
                     type="button"
                     onClick={() => setDeleting(o)}
-                    className="rounded-md border border-red-300 text-red-600 p-2 hover:bg-red-50 dark:border-red-400/40 dark:text-red-300 dark:hover.bg.red-400/10"
+                    className="rounded-md border border-red-300 text-red-600 p-2 hover:bg-red-50"
                     title="Delete order"
                     aria-label="Delete order"
                   >
@@ -833,7 +833,7 @@ export default function OrdersTable() {
               id="status"
               value={form.status}
               onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as Order["status"] }))}
-              className="w-full rounded-md border border-black/10 dark:border-white/15 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+              className="w-full rounded-md border border-black/10  bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
             >
               <option value="Pending">Pending</option>
               <option value="Delivered">Delivered</option>
@@ -852,7 +852,7 @@ export default function OrdersTable() {
             value={form.message}
             onChange={(e) => setForm((p) => ({ ...p, message: e.target.value }))}
             placeholder="Add a note or instructions..."
-            className="w-full rounded-md border border-black/10 dark:border-white/15 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50 resize-y"
+            className="w-full rounded-md border border-black/10  bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50 resize-y"
           />
         </div>  
 
@@ -863,14 +863,14 @@ export default function OrdersTable() {
               <button
                 type="button"
                 onClick={addItemRow}
-                className="rounded-md border border-black/10 dark:border-white/15 px-3 py-1 text-xs hover:bg-black/[.04] dark:hover:bg.white/[.06]"
+                className="rounded-md border border-black/10  px-3 py-1 text-xs hover:bg-black/[.04] dark:hover:bg.white/[.06]"
               >
                 + Product
               </button>
               <button
                 type="button"
                 onClick={addCustomItemRow}
-                className="rounded-md border border-black/10 dark:border-white/15 px-3 py-1 text-xs hover:bg-black/[.04] dark:hover.bg.white/[.06]"
+                className="rounded-md border border-black/10  px-3 py-1 text-xs hover:bg-black/[.04] dark:hover.bg.white/[.06]"
               >
                 + Custom
               </button>
@@ -893,7 +893,7 @@ export default function OrdersTable() {
                             placeholder="Custom item / description"
                             value={it.name}
                             onChange={(e) => setItem(idx, { name: e.target.value })}
-                            className="flex-1 rounded-md border border-black/10 dark:border-white/15 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+                            className="flex-1 rounded-md border border-black/10  bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
                             required
                           />
                           <input
@@ -904,7 +904,7 @@ export default function OrdersTable() {
                             onChange={(e) =>
                               setItem(idx, { price: Number(e.target.value || 0) } as any)
                             }
-                            className="w-24 rounded-md border border-black/10 dark:border-white/15 bg-transparent px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+                            className="w-24 rounded-md border border-black/10  bg-transparent px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
                             placeholder="Price"
                             required
                           />
@@ -917,7 +917,7 @@ export default function OrdersTable() {
                                 qty: Math.max(1, Number.parseInt(e.target.value || "1", 10)),
                               })
                             }
-                            className="w-16 rounded-md border border-black/10 dark:border-white/15 bg-transparent px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+                            className="w-16 rounded-md border border-black/10  bg-transparent px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
                             placeholder="Qty"
                             required
                           />
@@ -985,7 +985,7 @@ export default function OrdersTable() {
                                   qty: Math.max(1, Number.parseInt(e.target.value || "1", 10)),
                                 })
                               }
-                              className="w-full rounded-md border border-black/10 dark:border-white/15 bg-transparent px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+                              className="w-full rounded-md border border-black/10  bg-transparent px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
                               placeholder="Qty"
                               required
                             />
@@ -1036,7 +1036,7 @@ export default function OrdersTable() {
                       discount: Math.max(0, Number(e.target.value || 0)),
                     }))
                   }
-                  className="w-full rounded-md border border-black/10 dark:border-white/15 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+                  className="w-full rounded-md border border-black/10  bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
                   placeholder="0"
                 />
               </div>

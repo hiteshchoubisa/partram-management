@@ -33,10 +33,10 @@ type Props<T> = {
 
 function btnClasses(kind: RowAction<any>["kind"]) {
   if (kind === "danger")
-    return "rounded-md border border-red-300 text-red-600 px-3 py-1 text-xs hover:bg-red-50 dark:border-red-400/40 dark:text-red-300 dark:hover:bg-red-400/10";
+    return "rounded-md border border-red-300 text-red-600 px-3 py-1 text-xs hover:bg-red-50";
   if (kind === "primary")
     return "rounded-md bg-blue-600 text-white px-3 py-1 text-xs font-medium hover:bg-blue-700";
-  return "rounded-md border border-black/10 dark:border-white/15 px-3 py-1 text-xs hover:bg-black/[.04] dark:hover:bg-white/[.06]";
+  return "rounded-md border border-black/10 px-3 py-1 text-xs hover:bg-black/[.04]";
 }
 
 export default function DataTable<T>({
@@ -57,7 +57,7 @@ export default function DataTable<T>({
       {/* Mobile cards */}
       <div className="md:hidden space-y-3">
         {rows.length === 0 ? (
-          <div className="rounded-lg border border-black/10 dark:border-white/15 p-4 text-center text-gray-500">
+          <div className="rounded-lg border border-black/10 p-4 text-center text-gray-500">
             {emptyMessage}
           </div>
         ) : (
@@ -66,14 +66,14 @@ export default function DataTable<T>({
             return (
               <div
                 key={key}
-                className="relative rounded-lg border border-black/10 dark:border-white/15 bg-white dark:bg-zinc-900 p-3"
+                className="relative rounded-lg border border-black/10 bg-white p-3"
               >
                 {cardRenderer ? (
                   cardRenderer(row)
                 ) : (
                   <div className="space-y-1 text-sm">
                     {columns.map((col) => (
-                      <div key={col.key} className="text-gray-700 dark:text-gray-300">
+                      <div key={col.key} className="text-gray-700">
                         <span className="text-xs uppercase tracking-wide opacity-70">
                           {typeof col.header === "string" ? col.header : col.key}:{" "}
                         </span>
@@ -108,9 +108,9 @@ export default function DataTable<T>({
 
       {/* Desktop table */}
       <div className="hidden md:block">
-        <div className="overflow-x-auto rounded-lg border border-black/10 dark:border-white/15">
+        <div className="overflow-x-auto rounded-lg border border-black/10">
           <table className={tableClassName ?? "min-w-full text-left text-sm w-full"}>
-            <thead className="bg-black/[.04] dark:bg-white/[.06]">
+            <thead className="bg-black/[.04]">
               <tr>
                 {columns.map((col) => (
                   <th key={col.key} className={`px-4 py-3 font-semibold ${col.headerClassName ?? ""}`}>
@@ -133,7 +133,7 @@ export default function DataTable<T>({
                 rows.map((row, idx) => {
                   const key = rowKey(row, idx);
                   return (
-                    <tr key={key} className="border-t border-black/5 dark:border-white/10">
+                    <tr key={key} className="border-t border-black/5">
                       {columns.map((col) => (
                         <td key={col.key} className={`px-4 py-3 ${col.className ?? ""}`}>
                           {col.accessor ? col.accessor(row, idx) : (row as any)[col.key]}

@@ -244,7 +244,7 @@ export default function ClientsTable() {
               setQuery(e.target.value);
             }}
             placeholder="Search name, phone or address..."
-            className="w-full sm:w-72 rounded-md border border-black/10 dark:border-white/15 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+            className="w-full sm:w-72 rounded-md border border-black/10  bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
             aria-label="Search clients by name, phone or address"
           />
         </div>
@@ -281,7 +281,7 @@ export default function ClientsTable() {
               type="button"
               aria-label="Edit"
               onClick={() => openEdit(c)}
-              className="rounded-md p-2 hover:bg-black/5 dark:hover:bg-white/10"
+              className="rounded-md p-2 hover:bg-black/5 "
               title="Edit"
             >
               <Pencil className="h-4 w-4" />
@@ -290,7 +290,7 @@ export default function ClientsTable() {
               type="button"
               aria-label="Delete"
               onClick={() => openDelete(c)}
-              className="rounded-md p-2 hover:bg-black/5 dark:hover:bg-white/10 text-red-600 dark:text-red-400"
+              className="rounded-md p-2 hover:bg-black/5  text-red-600 "
               title="Delete"
             >
               <Trash2 className="h-4 w-4" />
@@ -308,7 +308,7 @@ export default function ClientsTable() {
                   type="button"
                   aria-label="Edit"
                   onClick={(e) => { e.stopPropagation(); openEdit(c); }}
-                  className="rounded-md p-2 hover:bg-black/5 dark:hover:bg-white/10"
+                  className="rounded-md p-2 hover:bg-black/5 "
                   title="Edit"
                 >
                   <Pencil className="h-4 w-4" />
@@ -317,7 +317,7 @@ export default function ClientsTable() {
                   type="button"
                   aria-label="Delete"
                   onClick={(e) => { e.stopPropagation(); openDelete(c); }}
-                  className="rounded-md p-2 hover:bg-black/5 dark:hover:bg-white/10 text-red-600 dark:text-red-400"
+                  className="rounded-md p-2 hover:bg-black/5  text-red-600 "
                   title="Delete"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -362,7 +362,7 @@ export default function ClientsTable() {
             type="text"
             value={form.name}
             onChange={(e) => handleChange("name", e.target.value)}
-            className="w-full rounded-md border border-black/10 dark:border-white/15 bg-transparent px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/50"
+            className="w-full rounded-md border border-black/10  bg-transparent px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/50"
             placeholder="Enter full name"
             required
           />
@@ -383,7 +383,7 @@ export default function ClientsTable() {
             id="address"
             value={form.address}
             onChange={(e) => handleChange("address", e.target.value)}
-            className="w-full rounded-md border border-black/10 dark:border-white/15 bg-transparent px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/50"
+            className="w-full rounded-md border border-black/10  bg-transparent px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/50"
             placeholder="Street, Area, City"
             rows={3}
             required

@@ -12,12 +12,6 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
 
 body {
   background: var(--background);
@@ -105,20 +99,16 @@ button{
   color: #6b7280;
 }
 
-@media (prefers-color-scheme: dark) {
-  .description-text {
-    color: #9ca3af;
-  }
-  
-  .text-secondary-xs,
-  .text-secondary-sm,
-  .text-price,
-  .text-loading,
-  .text-address,
-  .text-subtitle,
-  .text-pagination,
-  .text-mobile-label {
-    color: #9ca3af;
-  }
+/* Password reset success styling */
+.text-success {
+  color: #059669;
+  font-weight: 500;
 }
+
+/* Password reset error styling */
+.text-error {
+  color: #dc2626;
+  font-weight: 500;
+}
+
  

@@ -46,8 +46,3 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-// e.g., app/api/health/route.ts
-export async function GET() {
-  const db = process.env.DATABASE_URL;
-  return new Response(JSON.stringify({ ok: !!db }), { headers: { 'Content-Type': 'application/json' } });
-}

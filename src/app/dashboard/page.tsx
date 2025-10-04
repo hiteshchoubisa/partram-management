@@ -2,10 +2,12 @@
 
 import { useEffect, useState, useMemo } from "react";
 import ManagementLayout from "../../components/ManagementLayout";
+import ProtectedRoute from "../../components/ProtectedRoute";
 import { supabase } from "../../lib/supabaseClient";
 import { formatDateTimeLabel } from "../../components/DateTimePicker";
 import MonthlySalesWidget from "../../components/MonthlySalesWidget";
 import Pagination from "../../components/ui/Pagination";
+import { useAuth } from "../../contexts/AuthContext";
 
 type Order = {
   id: string;
@@ -25,7 +27,8 @@ type Client = {
 const STATUS_TABS = ["Pending", "Delivered"] as const;
 type OrderStatusTab = typeof STATUS_TABS[number];
 
-export default function DashboardPage() {
+function DashboardContent() {
+  const { isAdmin } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersErr, setOrdersErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -186,7 +189,7 @@ export default function DashboardPage() {
       </section>
 
       {/* Orders by Status Section */}
-      <section className="rounded-lg border border-black/10 dark:border-white/15 p-4 mb-8">
+      <section className="rounded-lg border border-black/10 p-4 mb-8">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold">Orders by Status</h2>
           <div className="flex gap-2">
@@ -201,7 +204,7 @@ export default function DashboardPage() {
                   className={`rounded-md border px-3 py-1.5 text-xs sm:text-sm transition ${
                     active
                       ? "bg-foreground text-background"
-                      : "border-black/10 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/10"
+                      : "border-black/10 hover:bg-black/5"
                   }`}
                   title={st}
                 >
@@ -224,14 +227,14 @@ export default function DashboardPage() {
           <p className="text-sm opacity-70">No {statusTab.toLowerCase()} orders.</p>
         ) : (
           <>
-            <ul className="divide-y divide-black/10 dark:divide-white/10">
+            <ul className="divide-y divide-black/10">
               {pagedStatusOrders.map((o) => (
               <li key={o.id} className="py-3 flex items-center justify-between">
                 <div>
                   <p className="font-medium">{o.client}</p>
                   {/* ✅ Show client address under name */}
                   {getClientAddress(o.client) ? (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-gray-500">
                       {getClientAddress(o.client)}
                     </p>
                   ) : null}
@@ -266,5 +269,13 @@ export default function DashboardPage() {
         )}
       </section>
     </ManagementLayout>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <ProtectedRoute>
+      <DashboardContent />
+    </ProtectedRoute>
   );
 }

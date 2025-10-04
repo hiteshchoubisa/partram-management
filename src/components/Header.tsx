@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { useAuth } from "@/contexts/AuthContext";
 
 const nav = [
   { href: "/dashboard/", label: "Dashboard" },
@@ -12,13 +13,14 @@ const nav = [
   { href: "/products/", label: "Products" },
   { href: "/shop/", label: "Shop" },
   { href: "/reminders/", label: "Reminders" },
+  { href: "/users/", label: "Users", adminOnly: true },
 ];
 
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [authed, setAuthed] = useState(false);
+  const { user, isAdmin, signOut } = useAuth();
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -50,9 +52,10 @@ export default function Header() {
     };
   }, [open]);
 
-  useEffect(() => {
-    setAuthed(document.cookie.includes("pm_auth=1"));
-  }, []);
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/login");
+  };
 
   return (
     <header className="header-bg w-full p-4 border-b border-zinc-200 dark:border-zinc-800">
@@ -69,21 +72,36 @@ export default function Header() {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex gap-6 text-sm items-center">
-          {nav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              prefetch
-              onMouseEnter={() => {
-                const r: any = router as any;
-                if (typeof r?.prefetch === "function") r.prefetch(item.href);
-              }}
-              aria-current={isActive(item.href) ? "page" : undefined}
-              className={`hover:underline ${isActive(item.href) ? "underline underline-offset-4 font-medium" : ""}`}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {nav
+            .filter((item) => !item.adminOnly || isAdmin)
+            .map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                prefetch
+                onMouseEnter={() => {
+                  const r: any = router as any;
+                  if (typeof r?.prefetch === "function") r.prefetch(item.href);
+                }}
+                aria-current={isActive(item.href) ? "page" : undefined}
+                className={`hover:underline ${isActive(item.href) ? "underline underline-offset-4 font-medium" : ""}`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          {user && (
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {user.email}
+              </span>
+              <button
+                onClick={handleSignOut}
+                className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+              >
+                Sign Out
+              </button>
+            </div>
+          )}
         </nav>
 
         {/* Mobile menu button */}
@@ -152,22 +170,40 @@ export default function Header() {
             </button>
           </div>
           <nav className="px-4 py-3 space-y-1">
-            {nav.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                prefetch
-                onMouseEnter={() => {
-                  const r: any = router as any;
-                  if (typeof r?.prefetch === "function") r.prefetch(item.href);
-                }}
-                onClick={() => setOpen(false)}
-                aria-current={isActive(item.href) ? "page" : undefined}
-                className={`block rounded px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 ${isActive(item.href) ? "font-medium underline underline-offset-4" : ""}`}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {nav
+              .filter((item) => !item.adminOnly || isAdmin)
+              .map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  prefetch
+                  onMouseEnter={() => {
+                    const r: any = router as any;
+                    if (typeof r?.prefetch === "function") r.prefetch(item.href);
+                  }}
+                  onClick={() => setOpen(false)}
+                  aria-current={isActive(item.href) ? "page" : undefined}
+                  className={`block rounded px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 ${isActive(item.href) ? "font-medium underline underline-offset-4" : ""}`}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            {user && (
+              <div className="border-t border-zinc-200 dark:border-zinc-800 pt-3 mt-3">
+                <div className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400">
+                  {user.email}
+                </div>
+                <button
+                  onClick={() => {
+                    handleSignOut();
+                    setOpen(false);
+                  }}
+                  className="block w-full text-left px-3 py-2 text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
+                >
+                  Sign Out
+                </button>
+              </div>
+            )}
           </nav>
         </aside>
       </div>
