@@ -20,6 +20,15 @@ function resolvePhotoUrl(v?: string | null) {
   return supabase.storage.from(PRODUCT_BUCKET).getPublicUrl(v).data.publicUrl || undefined;
 }
 
+// Resolve multiple image URLs from JSONB array
+function resolveImageUrls(images: any): string[] {
+  if (!images || !Array.isArray(images)) return [];
+  return images
+    .filter((img) => img && typeof img === 'string')
+    .map((img) => resolvePhotoUrl(img))
+    .filter((url) => url !== undefined) as string[];
+}
+
 function sanitizeFilename(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9.-]/g, "-");
 }
@@ -42,6 +51,9 @@ function mapProductRow(row: any): Product {
     mrp: row.mrp != null ? Number(row.mrp) : undefined,
     category: row.category ?? "",
     description: row.description ?? "",
+    images: resolveImageUrls(row.images),
+    imagePaths: row.images || [], // keep original storage paths
+    // Keep legacy photo_url support for backward compatibility
     photoUrl: resolvePhotoUrl(row.photo_url ?? row.photoUrl ?? null),
     photoPath: row.photo_url ?? undefined, // keep original storage path
   };
@@ -54,6 +66,9 @@ type Product = {
   price: number;
   mrp?: number; // Allow undefined
   category: string;
+  images: string[]; // resolved public URLs
+  imagePaths: string[]; // storage paths saved in DB (images column)
+  // Keep legacy photo_url support for backward compatibility
   photoUrl?: string; // data/object URL
   photoPath?: string; // storage path saved in DB (photo_url)
 };
@@ -64,8 +79,13 @@ type FormState = {
   price: string; // keep as string in form, parse on submit
   mrp: string;
   category: string;
+  imageFiles: File[];
+  imageUrls: string[];
+  // Keep legacy photo support for backward compatibility
   photoFile: File | null;
   photoUrl?: string;
+  // Track which existing images to keep/remove
+  existingImagePaths: string[];
 };
 
 const inr = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
@@ -82,8 +102,11 @@ export default function ProductsTable() {
     price: "",
     mrp: "",
     category: "",
+    imageFiles: [],
+    imageUrls: [],
     photoFile: null,
     photoUrl: undefined,
+    existingImagePaths: [],
   });
 
   // pagination state
@@ -129,7 +152,18 @@ export default function ProductsTable() {
 
   function openAdd() {
     setEditing(null);
-    setForm({ name: "", description: "", price: "", mrp: "", category: "", photoFile: null, photoUrl: undefined });
+    setForm({ 
+      name: "", 
+      description: "", 
+      price: "", 
+      mrp: "", 
+      category: "", 
+      imageFiles: [], 
+      imageUrls: [], 
+      photoFile: null, 
+      photoUrl: undefined,
+      existingImagePaths: []
+    });
     setIsOpen(true);
   }
 
@@ -141,8 +175,11 @@ export default function ProductsTable() {
       price: String(p.price),
       mrp: String(p.mrp),
       category: p.category,
+      imageFiles: [],
+      imageUrls: p.images,
       photoFile: null,
       photoUrl: p.photoUrl,
+      existingImagePaths: p.imagePaths || [],
     });
     setIsOpen(true);
   }
@@ -171,7 +208,67 @@ export default function ProductsTable() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleImageFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    if (!file) return;
+    
+    // Check if we already have 4 images
+    if (form.imageFiles.length >= 4) {
+      alert('Maximum 4 images allowed per product');
+      return;
+    }
+    
+    const url = URL.createObjectURL(file);
+    setForm((prev) => ({
+      ...prev,
+      imageFiles: [...prev.imageFiles, file],
+      imageUrls: [...prev.imageUrls, url]
+    }));
+  }
+
+  function removeImage(index: number) {
+    setForm((prev) => {
+      const newFiles = [...prev.imageFiles];
+      const newUrls = [...prev.imageUrls];
+      const existingPaths = [...prev.existingImagePaths];
+      
+      // Check if this is a new file (blob URL) or existing image
+      const isNewFile = newUrls[index] && newUrls[index].startsWith('blob:');
+      
+      if (isNewFile) {
+        // Revoke object URL to avoid memory leaks
+        try {
+          URL.revokeObjectURL(newUrls[index]);
+        } catch {}
+        
+        // Remove from new files
+        newFiles.splice(index, 1);
+        newUrls.splice(index, 1);
+      } else {
+        // This is an existing image - remove from existing paths
+        const imageUrl = newUrls[index];
+        const pathIndex = existingPaths.findIndex(path => 
+          imageUrl.includes(path) || imageUrl.endsWith(path)
+        );
+        
+        if (pathIndex !== -1) {
+          existingPaths.splice(pathIndex, 1);
+        }
+        
+        // Remove from display URLs
+        newUrls.splice(index, 1);
+      }
+      
+      return {
+        ...prev,
+        imageFiles: newFiles,
+        imageUrls: newUrls,
+        existingImagePaths: existingPaths
+      };
+    });
+  }
+
+  function handlePhotoFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
     if (!file) {
       setForm((prev) => ({ ...prev, photoFile: null, photoUrl: undefined }));
@@ -202,7 +299,25 @@ export default function ProductsTable() {
     };
 
     try {
-      // If a new file is selected, upload and set photo_url
+      // Upload new image files
+      const newImagePaths: string[] = [];
+      if (form.imageFiles.length > 0) {
+        for (const file of form.imageFiles) {
+          const path = await uploadPhoto(file);
+          newImagePaths.push(path);
+        }
+      }
+
+      // Handle images for editing vs new products
+      if (editing) {
+        // For editing: keep existing images that weren't removed + add new ones
+        payload.images = [...form.existingImagePaths, ...newImagePaths];
+      } else {
+        // For new products: only new images
+        payload.images = newImagePaths;
+      }
+
+      // Keep legacy photo_url support for backward compatibility
       let newPhotoPath: string | null = null;
       if (form.photoFile) {
         newPhotoPath = await uploadPhoto(form.photoFile);
@@ -217,7 +332,15 @@ export default function ProductsTable() {
           .select("*")
           .single();
         if (!error && data) {
-          // Optionally remove old file if replaced
+          // Remove old files that were deleted
+          const originalPaths = editing.imagePaths || [];
+          const removedPaths = originalPaths.filter(path => !form.existingImagePaths.includes(path));
+          
+          if (removedPaths.length > 0) {
+            await supabase.storage.from(PRODUCT_BUCKET).remove(removedPaths).catch(() => {});
+          }
+          
+          // Optionally remove old photo if replaced
           if (form.photoFile && editing.photoPath && editing.photoPath !== newPhotoPath) {
             await supabase.storage.from(PRODUCT_BUCKET).remove([editing.photoPath]).catch(() => {});
           }
@@ -231,6 +354,8 @@ export default function ProductsTable() {
                     mrp: data.mrp != null ? Number(data.mrp) : undefined,
                     category: data.category ?? "",
                     description: data.description ?? "",
+                    images: resolveImageUrls(data.images),
+                    imagePaths: data.images || [],
                     photoUrl: resolvePhotoUrl(data.photo_url ?? null),
                     photoPath: data.photo_url ?? undefined,
                   }
@@ -249,6 +374,8 @@ export default function ProductsTable() {
               mrp: data.mrp != null ? Number(data.mrp) : undefined,
               category: data.category ?? "",
               description: data.description ?? "",
+              images: resolveImageUrls(data.images),
+              imagePaths: data.images || [],
               photoUrl: resolvePhotoUrl(data.photo_url ?? null),
               photoPath: data.photo_url ?? undefined,
             },
@@ -266,7 +393,7 @@ export default function ProductsTable() {
     (async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id,name,price,mrp,category,description,photo_url,created_at")
+        .select("id,name,price,mrp,category,description,photo_url,images,created_at")
         .order("created_at", { ascending: false });
       if (!error && data) setProducts(data.map(mapProductRow));
     })();
@@ -283,18 +410,47 @@ export default function ProductsTable() {
     return () => window.removeEventListener("keydown", onKey);
   }, [isOpen, deleting]);
 
+  // Cleanup object URLs on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      // Clean up any remaining object URLs
+      form.imageUrls.forEach(url => {
+        if (url && url.startsWith('blob:')) {
+          try {
+            URL.revokeObjectURL(url);
+          } catch {}
+        }
+      });
+      if (form.photoUrl && form.photoUrl.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(form.photoUrl);
+        } catch {}
+      }
+    };
+  }, []);
+
   const productColumns: Column<Product>[] = [
     {
-      key: "photo",
+      key: "featuredImage",
       header: "",
-      accessor: (p) =>
-        p.photoUrl ? (
-          <img
-            src={p.photoUrl}
-            alt={p.name}
-            className="h-10 w-10 rounded-md object-cover border border-black/10 dark:border-white/15"
-          />
-        ) : null,
+      accessor: (p) => {
+        const displayImages = p.images.length > 0 ? p.images : (p.photoUrl ? [p.photoUrl] : []);
+        const featuredImage = displayImages[0]; // First image is featured
+        return featuredImage ? (
+          <div className="relative">
+            <img
+              src={featuredImage}
+              alt={`${p.name} featured`}
+              className="h-10 w-10 rounded-md object-cover border border-black/10 dark:border-white/15"
+            />
+            {displayImages.length > 1 && (
+              <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center font-medium">
+                {displayImages.length}
+              </div>
+            )}
+          </div>
+        ) : null;
+      },
     },
     { key: "name", header: "Name", accessor: (p) => p.name },
     { key: "price", header: "Price", accessor: (p) => inr.format(p.price) },
@@ -336,15 +492,27 @@ export default function ProductsTable() {
           { label: "Edit", onClick: (p) => openEdit(p) },
           { label: "Delete", onClick: (p) => openDelete(p), kind: "danger" },
         ]}
-        cardRenderer={(p) => (
-          <div className="relative">
-            {p.photoUrl && (
-              <img
-                src={p.photoUrl}
-                alt={p.name}
-                className="absolute top-15 right-1 w-16 h-16 rounded-md object-cover border border-black/10 dark:border-white/15 z-20"
-              />
-            )}
+        cardRenderer={(p) => {
+          const displayImages = p.images.length > 0 ? p.images : (p.photoUrl ? [p.photoUrl] : []);
+          const featuredImage = displayImages[0]; // First image is featured
+          return (
+            <div className="relative">
+              {featuredImage && (
+                <div className="absolute top-15 right-1 z-20">
+                  <div className="relative">
+                    <img
+                      src={featuredImage}
+                      alt={`${p.name} featured`}
+                      className="w-16 h-16 rounded-md object-cover border border-black/10 dark:border-white/15"
+                    />
+                    {displayImages.length > 1 && (
+                      <div className="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center font-medium">
+                        {displayImages.length}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             <MobileCard
               title={p.name}
               right={
@@ -380,7 +548,8 @@ export default function ProductsTable() {
               ) : null}
             </MobileCard>
           </div>
-        )}
+        );
+        }}
       />
 
       <FormDialog
@@ -466,35 +635,51 @@ export default function ProductsTable() {
           />
         </div>
 
-        {/* Optional photo URL (if you store it) */}
+        {/* Product Images - Max 4 */}
         <div className="md:col-span-2">
-          <label htmlFor="photo" className="block text-sm font-medium mb-1">
-            Photo
+          <label htmlFor="images" className="block text-sm font-medium mb-1">
+            Product Images (Max 4) - First image will be featured
           </label>
-          <input
-            id="photo"
-            type="file"
-            accept="image/*"
-            onChange={(e) =>
-              setForm((p) => ({
-                ...p,
-                photoFile: e.target.files?.[0] ?? null,
-                // Optional preview
-                photoUrl: e.target.files?.[0] ? URL.createObjectURL(e.target.files[0]) : undefined,
-              }))
-            }
-            className="block w-full text-sm file:mr-4 file:rounded-md file:border-0 file:bg-foreground file:px-3 file:py-2 file:text-background file:hover:opacity-90"
-          />
-          {form.photoUrl && (
-            <div className="mt-3">
-              <img
-                src={form.photoUrl}
-                alt="Preview"
-                className="h-24 w-24 rounded object-contain bg-black/5 dark:bg-white/5"
-              />
+          {form.imageUrls.length < 4 && (
+            <input
+              id="images"
+              type="file"
+              accept="image/*"
+              onChange={handleImageFileChange}
+              className="block w-full text-sm file:mr-4 file:rounded-md file:border-0 file:bg-foreground file:px-3 file:py-2 file:text-background file:hover:opacity-90"
+            />
+          )}
+          {form.imageUrls.length >= 4 && (
+            <p className="text-sm text-gray-500 mb-2">Maximum 4 images reached</p>
+          )}
+          {form.imageUrls.length > 0 && (
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {form.imageUrls.map((url, index) => (
+                <div key={index} className="relative group">
+                  <img
+                    src={url}
+                    alt={`Preview ${index + 1}`}
+                    className="h-24 w-full rounded object-cover bg-black/5 dark:bg-white/5"
+                  />
+                  {index === 0 && (
+                    <div className="absolute top-1 left-1 bg-green-500 text-white text-xs px-2 py-1 rounded">
+                      Featured
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Remove image"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </div>
+
       </FormDialog>
 
       <DeleteConfirmDialog

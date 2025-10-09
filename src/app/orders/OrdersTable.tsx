@@ -186,15 +186,6 @@ export default function OrdersTable() {
       return dateB.getTime() - dateA.getTime();
     });
     
-    // Debug logging to verify sorting
-    if (sorted.length > 0) {
-      console.log("Sorted orders:", sorted.slice(0, 3).map(o => ({
-        client: o.client,
-        status: o.status,
-        orderDate: o.orderDate,
-        parsedDate: new Date(o.orderDate).toISOString()
-      })));
-    }
     
     return sorted;
   }, [orders]);
@@ -229,8 +220,6 @@ export default function OrdersTable() {
 
       if (!ordRes.error && ordRes.data) {
         const mappedOrders = ordRes.data.map(mapOrderRow);
-        console.log("Raw orders from DB:", ordRes.data.slice(0, 2));
-        console.log("Mapped orders:", mappedOrders.slice(0, 2));
         setOrders(mappedOrders);
       }
 
@@ -244,7 +233,6 @@ export default function OrdersTable() {
     (async () => {
       const res = await supabaseHealth();
       if (!res.ok) console.error("[supabase] health check failed:", res.error?.message);
-      else console.log("[supabase] connected. clients count ~", res.count);
     })();
   }, []);
 

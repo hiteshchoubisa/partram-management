@@ -10,6 +10,7 @@ import FormDialog from "@/components/ui/FormDialog";
 import DeleteConfirmDialog from "@/components/ui/DeleteConfirmDialog";
 import useDialog from "@/hooks/useDialog";
 import useForm from "@/hooks/useForm";
+import PasswordInput from "@/components/ui/PasswordInput";
 
 interface User {
   id: string;
@@ -284,8 +285,7 @@ function UsersContent() {
             <label className="block text-sm font-medium text-gray-700  mb-1">
               Password
             </label>
-            <input
-              type="password"
+            <PasswordInput
               value={addForm.form.password}
               onChange={(e) => addForm.setField("password", e.target.value)}
               className="w-full px-3 py-2 border border-gray-300  rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 bg-white  text-gray-900 "

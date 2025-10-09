@@ -137,7 +137,6 @@ export default function ClientsTable() {
       }
 
       const rows = (resp.data as any[]) ?? [];
-      console.log("[clients] fetched", rows.length, "rows", rows[0] ? { sample: rows[0] } : "");
       setClients(
         rows.map((c) => ({
           id: c.id,

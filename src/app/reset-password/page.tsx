@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import PasswordInput from "@/components/ui/PasswordInput";
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
@@ -101,10 +102,9 @@ export default function ResetPasswordPage() {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700  mb-1">
                 New Password
               </label>
-              <input
+              <PasswordInput
                 id="password"
                 name="password"
-                type="password"
                 autoComplete="new-password"
                 required
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-300  placeholder-gray-500 dark:placeholder-gray-400 text-gray-900  rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm bg-white "
@@ -118,10 +118,9 @@ export default function ResetPasswordPage() {
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700  mb-1">
                 Confirm Password
               </label>
-              <input
+              <PasswordInput
                 id="confirmPassword"
                 name="confirmPassword"
-                type="password"
                 autoComplete="new-password"
                 required
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-300  placeholder-gray-500 dark:placeholder-gray-400 text-gray-900  rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm bg-white "

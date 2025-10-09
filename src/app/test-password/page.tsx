@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import PasswordInput from "@/components/ui/PasswordInput";
 
 export default function TestPasswordPage() {
   const [email, setEmail] = useState("hitesh.choubisa123@gmail.com");
@@ -78,8 +79,7 @@ export default function TestPasswordPage() {
             <label className="block text-sm font-medium text-gray-700  mb-1">
               Password to test
             </label>
-            <input
-              type="password"
+            <PasswordInput
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300  rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 bg-white  text-gray-900 "

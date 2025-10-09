@@ -6,6 +6,7 @@ import ProtectedRoute from "../../components/ProtectedRoute";
 import { supabase } from "../../lib/supabaseClient";
 import { formatDateTimeLabel } from "../../components/DateTimePicker";
 import MonthlySalesWidget from "../../components/MonthlySalesWidget";
+import ItemsSalesWidget from "../../components/ItemsSalesWidget";
 import Pagination from "../../components/ui/Pagination";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -86,12 +87,16 @@ function DashboardContent() {
   }, []);
 
   async function loadClients() {
-    const { data, error } = await supabase
-      .from("clients")
-      .select("id, name, address, phone")
-      .order("name", { ascending: true });
-    if (!error && data) {
-      setClients(data as Client[]);
+    try {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, name, address, phone")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      setClients((data as Client[]) ?? []);
+    } catch (e: any) {
+      console.error("[dashboard] clients load failed:", e?.message);
+      setClients([]);
     }
   }
 
@@ -188,6 +193,8 @@ function DashboardContent() {
         <MonthlySalesWidget />
       </section>
 
+      
+
       {/* Orders by Status Section */}
       <section className="rounded-lg border border-black/10 p-4 mb-8">
         <div className="mb-4 flex items-center justify-between">
@@ -267,6 +274,10 @@ function DashboardContent() {
           )}
           </>
         )}
+      </section>
+
+      <section className="mb-8">
+        <ItemsSalesWidget />
       </section>
     </ManagementLayout>
   );
