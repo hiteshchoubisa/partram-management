@@ -542,20 +542,6 @@ export default function OrdersTable() {
     },
     { key: "orderDate", header: "Order Date", accessor: (o) => formatDateTimeLabel(o.orderDate) },
     {
-      key: "status",
-      header: "Status",
-      accessor: (o) => (
-        <select
-          value={o.status}
-          onChange={(e) => updateStatus(o.id, e.target.value as Order["status"])}
-          className="rounded-md border border-black/10 bg-transparent px-2 py-1 text-xs outline-none"
-        >
-          <option value="Pending">Pending</option>
-          <option value="Delivered">Delivered</option>
-        </select>
-      ),
-    },
-    {
       key: "items",
       header: "Items",
       accessor: (o) => (
@@ -630,7 +616,8 @@ export default function OrdersTable() {
         rows={pagedOrders}
         columns={orderColumns}
         rowKey={(o) => o.id}
-        emptyMessage='No orders yet. Click “Add Order” to create one.'
+        emptyMessage='No orders yet. Click "Add Order" to create one.'
+        rowClassName={(o) => o.status === "Delivered" ? "bg-green-50" : "bg-orange-50"}
         rowActionsRenderer={(o) => {
           const client = clients.find(c => c.name === o.client);
           const waLink = buildOrderWaLink(o, availableProducts, client?.phone);
@@ -674,19 +661,22 @@ export default function OrdersTable() {
         cardRenderer={(o) => {
           const client = clients.find(c => c.name === o.client);
           const waLink = buildOrderWaLink(o, availableProducts, client?.phone);
+          const isPending = o.status === "Pending";
+          const cardBgColor = isPending ? "bg-orange-50" : "bg-green-50";
+          const cardBorderColor = isPending ? "border-orange-200" : "border-green-200";
+          
           return (
-         
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <button
-                      onClick={() => setViewingDetails(o)}
-                      className="text-left w-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded"
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-gray-900 truncate">
-                          {o.client}
-                        </span>
-                  
+            <div className={`p-4 rounded-lg border ${cardBgColor} ${cardBorderColor} -m-3`}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <button
+                    onClick={() => setViewingDetails(o)}
+                    className="text-left w-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium text-gray-900 truncate">
+                        {o.client}
+                  </span>
                 </div>
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <span>
@@ -696,14 +686,6 @@ export default function OrdersTable() {
                     <div className="text-base font-bold text-red-700 mt-1">
                       {inr.format(Math.max(0, orderTotal(o) - (o.discount || 0)))}
                     </div>
-                    <span
-                    className={
-                      "inline-flex items-center rounded-md border px-2 py-0.5 text-xs " +
-                      statusBadgeClass(o.status)
-                    }
-                  >
-                    {o.status || "Pending"}
-                  </span>
                   </button>
                 </div>
                 
@@ -743,8 +725,8 @@ export default function OrdersTable() {
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
-                    </div>
-         
+              </div>
+            </div>
           );
         }}
       />

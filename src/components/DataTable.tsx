@@ -29,6 +29,8 @@ type Props<T> = {
   wrapperClassName?: string;
   // NEW: custom renderer for actions cell (use for icon-only actions)
   rowActionsRenderer?: (row: T, index: number) => React.ReactNode;
+  // Row styling
+  rowClassName?: (row: T, index: number) => string;
 };
 
 function btnClasses(kind: RowAction<any>["kind"]) {
@@ -49,6 +51,7 @@ export default function DataTable<T>({
   tableClassName,
   wrapperClassName,
   rowActionsRenderer,
+  rowClassName,
 }: Props<T>) {
   const hasActionsCol = Boolean((actions && actions.length > 0) || rowActionsRenderer);
 
@@ -133,7 +136,7 @@ export default function DataTable<T>({
                 rows.map((row, idx) => {
                   const key = rowKey(row, idx);
                   return (
-                    <tr key={key} className="border-t border-black/5">
+                    <tr key={key} className={`border-t border-black/5 ${rowClassName ? rowClassName(row, idx) : ""}`}>
                       {columns.map((col) => (
                         <td key={col.key} className={`px-4 py-3 ${col.className ?? ""}`}>
                           {col.accessor ? col.accessor(row, idx) : (row as any)[col.key]}
