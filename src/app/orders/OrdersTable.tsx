@@ -676,24 +676,17 @@ export default function OrdersTable() {
           const waLink = buildOrderWaLink(o, availableProducts, client?.phone);
           return (
          
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <button
-                    onClick={() => setViewingDetails(o)}
-                    className="text-left w-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
-                        {o.client}
-                      </span>
-                  <span
-                    className={
-                      "inline-flex items-center rounded-md border px-2 py-0.5 text-xs " +
-                      statusBadgeClass(o.status)
-                    }
-                  >
-                    {o.status || "Pending"}
-                  </span>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <button
+                      onClick={() => setViewingDetails(o)}
+                      className="text-left w-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded"
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-gray-900 truncate">
+                          {o.client}
+                        </span>
+                  
                 </div>
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <span>
@@ -703,6 +696,14 @@ export default function OrdersTable() {
                     <div className="text-base font-bold text-red-700 mt-1">
                       {inr.format(Math.max(0, orderTotal(o) - (o.discount || 0)))}
                     </div>
+                    <span
+                    className={
+                      "inline-flex items-center rounded-md border px-2 py-0.5 text-xs " +
+                      statusBadgeClass(o.status)
+                    }
+                  >
+                    {o.status || "Pending"}
+                  </span>
                   </button>
                 </div>
                 
@@ -834,14 +835,14 @@ export default function OrdersTable() {
               <button
                 type="button"
                 onClick={addItemRow}
-                className="rounded-md border border-black/10  px-3 py-1 text-xs hover:bg-black/[.04] dark:hover:bg.white/[.06]"
+                className="rounded-md border border-black/10  px-3 py-1 text-xs hover:bg-black/[.04]"
               >
                 + Product
               </button>
               <button
                 type="button"
                 onClick={addCustomItemRow}
-                className="rounded-md border border-black/10  px-3 py-1 text-xs hover:bg-black/[.04] dark:hover.bg.white/[.06]"
+                className="rounded-md border border-black/10  px-3 py-1 text-xs hover:bg-black/[.04]"
               >
                 + Custom
               </button>
@@ -901,7 +902,7 @@ export default function OrdersTable() {
                             <button
                               type="button"
                               onClick={() => removeItemRow(idx)}
-                              className="rounded-md border border-red-300 text-red-600 px-2 py-1 text-xs hover:bg-red-50 dark:border-red-400/40 dark:text-red-300 dark:hover:bg-red-400/10"
+                              className="rounded-md border border-red-300 text-red-600 px-2 py-1 text-xs hover:bg-red-50"
                               aria-label="Remove custom item"
                             >
                               Remove
@@ -979,7 +980,7 @@ export default function OrdersTable() {
                             <button
                               type="button"
                               onClick={() => removeItemRow(idx)}
-                              className="rounded-md border border-red-300 text-red-600 px-2 py-1 text-xs hover:bg-red-50 dark:border-red-400/40 dark:text-red-300 dark:hover:bg-red-400/10"
+                              className="rounded-md border border-red-300 text-red-600 px-2 py-1 text-xs hover:bg-red-50"
                               aria-label="Remove item"
                             >
                               Remove
@@ -996,7 +997,7 @@ export default function OrdersTable() {
           </div>
         </div>
 
-        <div className="md:col-span-2 flex flex-col gap-3 border-t border-black/10 dark:border-white/10 pt-4">
+        <div className="md:col-span-2 flex flex-col gap-3 border-t border-black/10 pt-4">
           <div className="flex flex-col sm:flex-row gap-4 sm:items-end">
             <div className="flex-1">
               <p className="text-secondary-sm flex items-center justify-between">
@@ -1045,10 +1046,10 @@ export default function OrdersTable() {
       {/* Order Details Popup */}
       {viewingDetails && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full max-h-[80vh] overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-md w-full max-h-[80vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                <h3 className="text-lg font-semibold text-gray-900">
                   Order Details
                 </h3>
                  {/* Status */}
@@ -1066,7 +1067,7 @@ export default function OrdersTable() {
 
                 <button
                   onClick={() => setViewingDetails(null)}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  className="text-gray-400 hover:text-gray-600"
                   aria-label="Close"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1078,8 +1079,8 @@ export default function OrdersTable() {
               <div className="space-y-4">
                 {/* Client Info */}
                 <div>
-                  <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Client</div>
-                  <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  <div className="text-sm font-medium text-gray-500 mb-1">Client</div>
+                  <div className="text-lg font-semibold text-gray-900">
                     {viewingDetails.client}
                   </div>
                 </div>
@@ -1089,8 +1090,8 @@ export default function OrdersTable() {
                   const client = clients.find(c => c.name === viewingDetails.client);
                   return client?.address ? (
                     <div>
-                      <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Address</div>
-                      <div className="text-sm text-gray-900 dark:text-gray-100 break-words">
+                      <div className="text-sm font-medium text-gray-500 mb-1">Address</div>
+                      <div className="text-sm text-gray-900 break-words">
                         {client.address}
                       </div>
                     </div>
@@ -1100,14 +1101,14 @@ export default function OrdersTable() {
                 {/* Order Info */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Order Number</div>
-                    <div className="text-sm font-mono text-gray-900 dark:text-gray-100">
+                    <div className="text-sm font-medium text-gray-500 mb-1">Order Number</div>
+                    <div className="text-sm font-mono text-gray-900">
                       {viewingDetails.order_number || viewingDetails.id.slice(0, 8)}
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Date</div>
-                    <div className="text-sm text-gray-900 dark:text-gray-100">
+                    <div className="text-sm font-medium text-gray-500 mb-1">Date</div>
+                    <div className="text-sm text-gray-900">
                       {formatDateTimeLabel(viewingDetails.orderDate)}
                     </div>
                   </div>
@@ -1118,7 +1119,7 @@ export default function OrdersTable() {
 
                 {/* Items */}
                 <div>
-                  <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Items</div>
+                  <div className="text-sm font-medium text-gray-500 mb-2">Items</div>
                   <div className="text-sm">
                     {viewingDetails.items && viewingDetails.items.length > 0 ? 
                       renderItemsList(viewingDetails) : 
@@ -1130,8 +1131,8 @@ export default function OrdersTable() {
                 {/* Message */}
                 {viewingDetails.message && (
                   <div>
-                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Message</div>
-                    <div className="text-sm text-gray-900 dark:text-gray-100 break-words whitespace-pre-line">
+                    <div className="text-sm font-medium text-gray-500 mb-1">Message</div>
+                    <div className="text-sm text-gray-900 break-words whitespace-pre-line">
                       {viewingDetails.message}
                     </div>
                   </div>
@@ -1139,7 +1140,7 @@ export default function OrdersTable() {
 
                 {/* Amount */}
                 <div>
-                  <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Amount</div>
+                  <div className="text-sm font-medium text-gray-500 mb-1">Amount</div>
                   <div className="text-lg font-bold text-red-700" title={
                     viewingDetails.discount
                       ? `Base: ${inr.format(orderTotal(viewingDetails))}  Discount: ${inr.format(viewingDetails.discount || 0)}`
@@ -1151,7 +1152,7 @@ export default function OrdersTable() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200">
                 <button
                   onClick={() => {
                     setViewingDetails(null);
@@ -1163,7 +1164,7 @@ export default function OrdersTable() {
                 </button>
                 <button
                   onClick={() => setViewingDetails(null)}
-                  className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  className="flex-1 bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors"
                 >
                   Close
                 </button>
