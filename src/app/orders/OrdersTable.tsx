@@ -11,6 +11,7 @@ import DeleteConfirmDialog from "../../components/ui/DeleteConfirmDialog";
 import { supabase } from "../../lib/supabaseClient";
 import { supabaseHealth } from "../../lib/supabaseHealth";
 import AsyncSelect from "react-select/async";
+import { generateOrderId } from "../../lib/shortId";
 
 type Product = {
   id: string;
@@ -37,6 +38,7 @@ type OrderItem =
 
 type Order = {
   id: string;
+  order_number?: string; // Short order number like ORD-A1B2C3
   client: string;
   orderDate: string; // YYYY-MM-DD or YYYY-MM-DDTHH:mm
   status: "Pending" | "Delivered";
@@ -57,8 +59,7 @@ type FormState = {
 type Client = { id: string; name: string; address?: string | null; phone?: string | null };
 
 const newId = () => {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
-  return Math.random().toString(36).slice(2);
+  return generateOrderId();
 };
 
 function statusBadgeClass(status?: string | null) {
@@ -146,6 +147,7 @@ export default function OrdersTable() {
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<Order | null>(null);
   const [deleting, setDeleting] = useState<Order | null>(null);
+  const [viewingDetails, setViewingDetails] = useState<Order | null>(null);
 
   const [form, setForm] = useState<FormState>({
     client: "",
@@ -258,6 +260,7 @@ export default function OrdersTable() {
       rawStatus === "Delivered" ? "Delivered" : "Pending";
     return {
       id: row.id,
+      order_number: row.order_number || null,
       client: row.client,
       orderDate: row.order_date,
       status,
@@ -377,6 +380,7 @@ export default function OrdersTable() {
     if (!isValid) return;
 
     const payload = {
+      order_number: generateOrderId(), // Add short order number
       client: form.client.trim(),
       order_date: form.orderDate,
       status: form.status,
@@ -474,7 +478,7 @@ export default function OrdersTable() {
     return Promise.resolve(opts);
   };
 
-  const loadProductOptions = (input: string): Promise<RSOption<{ price: number }>[]> => {
+  const loadProductOptions = (input: string): Promise<RSOption<{ price: number; category?: string }>[]> => {
     const q = input.trim().toLowerCase();
     const opts = availableProducts
       .filter((p) => !q || p.name.toLowerCase().includes(q))
@@ -483,7 +487,7 @@ export default function OrdersTable() {
         value: p.id,
         label: p.name,
         hint: inr.format(p.price),
-        meta: { price: p.price },
+        meta: { price: p.price, category: p.category },
       }));
     return Promise.resolve(opts);
   };
@@ -504,6 +508,11 @@ export default function OrdersTable() {
 
   // Desktop table columns
   const orderColumns: Column<Order>[] = [
+    { 
+      key: "order_number", 
+      header: "Order #", 
+      accessor: (o) => o.order_number || `#${o.id.slice(0, 8)}...` 
+    },
     { key: "client", header: "Client", accessor: (o) => o.client },
     {
       key: "address",
@@ -666,10 +675,17 @@ export default function OrdersTable() {
           const client = clients.find(c => c.name === o.client);
           const waLink = buildOrderWaLink(o, availableProducts, client?.phone);
           return (
-            <MobileCard
-              title={
-                <div className="flex items-center gap-2">
-                  <span>{o.client}</span>
+         
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <button
+                    onClick={() => setViewingDetails(o)}
+                    className="text-left w-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                        {o.client}
+                      </span>
                   <span
                     className={
                       "inline-flex items-center rounded-md border px-2 py-0.5 text-xs " +
@@ -679,10 +695,19 @@ export default function OrdersTable() {
                     {o.status || "Pending"}
                   </span>
                 </div>
-              }
-              subtitle={formatDateTimeLabel(o.orderDate)}
-              right={
-                <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <span>
+                    {formatDateTimeLabel(o.orderDate)}
+                  </span>
+                </div>
+                    <div className="text-base font-bold text-red-700 mt-1">
+                      {inr.format(Math.max(0, orderTotal(o) - (o.discount || 0)))}
+                    </div>
+                  </button>
+                </div>
+                
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <button
                     type="button"
                     onClick={() => waLink && window.open(waLink, "_blank", "noopener,noreferrer")}
@@ -717,50 +742,8 @@ export default function OrdersTable() {
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
-              }
-              rows={[
-                {
-                  label: "Address",
-                  value: client?.address ? (
-                    <span className="text-xs break-words">
-                      {client.address}
-                    </span>
-                  ) : (
-                    <span className="text-xs opacity-60">—</span>
-                  ),
-                },
-                {
-                  label: "Items",
-                  value: (
-                    <div className="mt-1">
-                      {o.items && o.items.length > 0 ? renderItemsList(o) : <span className="text-xs opacity-60">—</span>}
                     </div>
-                  ),
-                },
-                o.message
-                  ? {
-                      label: "Message",
-                      value: (
-                        <span className="text-xs break-words whitespace-pre-line">
-                          {o.message}
-                        </span>
-                      ),
-                    }
-                  : null,
-                {
-                  label: "Amount",
-                  value: (
-                    <span className="text-base font-bold text-red-700" title={
-                      o.discount
-                        ? `Base: ${inr.format(orderTotal(o))}  Discount: ${inr.format(o.discount || 0)}`
-                        : undefined
-                    }>
-                      {inr.format(Math.max(0, orderTotal(o) - (o.discount || 0)))}
-                    </span>
-                  ),
-                },
-              ].filter(Boolean) as any}
-            />
+         
           );
         }}
       />
@@ -938,7 +921,7 @@ export default function OrdersTable() {
                                 value: p.id,
                                 label: p.name,
                                 hint: inr.format(p.price),
-                                meta: { price: p.price },
+                                meta: { price: p.price, category: p.category },
                               }))}
                               loadOptions={loadProductOptions}
                               value={
@@ -946,7 +929,7 @@ export default function OrdersTable() {
                                   ? ({
                                       value: selected.id,
                                       label: selected.name,
-                                      meta: { price: selected.price },
+                                      meta: { price: selected.price, category: selected.category },
                                     } as any)
                                   : null
                               }
@@ -957,13 +940,22 @@ export default function OrdersTable() {
                               styles={selectStyles as any}
                               formatOptionLabel={(opt: any) => (
                                 <div className="flex items-center justify-between gap-3">
-                                  <span className="truncate">{opt.label}</span>
-                                   
+                                  <div className="flex flex-col min-w-0 flex-1">
+                                    <span className="truncate font-medium">{opt.label}</span>
+                                    {opt.meta?.category && (
+                                      <span className="text-xs text-gray-500 truncate">
+                                        {opt.meta.category}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-sm font-medium text-green-600">
+                                    {opt.hint}
+                                  </span>
                                 </div>
                               )}
                             />
                           </div>
-                          <div className="w-20">
+                          <div className="w-10">
                             <input
                               type="number"
                               min={1}
@@ -995,6 +987,7 @@ export default function OrdersTable() {
                           )}
                         </div>
                       </div>
+                      
                     </>
                   )}
                 </div>
@@ -1045,9 +1038,140 @@ export default function OrdersTable() {
         onConfirm={confirmDelete}
         title="Delete Order"
         message={
-          <>Delete order for “{deleting?.client}” dated {deleting ? formatDateTimeLabel(deleting.orderDate) : ""}?</>
+          <>Delete order for "{deleting?.client}" dated {deleting ? formatDateTimeLabel(deleting.orderDate) : ""}?</>
         }
       />
+
+      {/* Order Details Popup */}
+      {viewingDetails && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Order Details
+                </h3>
+                 {/* Status */}
+                 <div>
+                
+                  <span
+                    className={
+                      "inline-flex items-center rounded-md border px-2 py-1 text-xs " +
+                      statusBadgeClass(viewingDetails.status)
+                    }
+                  >
+                    {viewingDetails.status || "Pending"}
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => setViewingDetails(null)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  aria-label="Close"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Client Info */}
+                <div>
+                  <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Client</div>
+                  <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    {viewingDetails.client}
+                  </div>
+                </div>
+
+                {/* Address */}
+                {(() => {
+                  const client = clients.find(c => c.name === viewingDetails.client);
+                  return client?.address ? (
+                    <div>
+                      <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Address</div>
+                      <div className="text-sm text-gray-900 dark:text-gray-100 break-words">
+                        {client.address}
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
+
+                {/* Order Info */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Order Number</div>
+                    <div className="text-sm font-mono text-gray-900 dark:text-gray-100">
+                      {viewingDetails.order_number || viewingDetails.id.slice(0, 8)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Date</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">
+                      {formatDateTimeLabel(viewingDetails.orderDate)}
+                    </div>
+                  </div>
+                </div>
+
+               
+                
+
+                {/* Items */}
+                <div>
+                  <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Items</div>
+                  <div className="text-sm">
+                    {viewingDetails.items && viewingDetails.items.length > 0 ? 
+                      renderItemsList(viewingDetails) : 
+                      <span className="text-gray-500">No items</span>
+                    }
+                  </div>
+                </div>
+
+                {/* Message */}
+                {viewingDetails.message && (
+                  <div>
+                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Message</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100 break-words whitespace-pre-line">
+                      {viewingDetails.message}
+                    </div>
+                  </div>
+                )}
+
+                {/* Amount */}
+                <div>
+                  <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Amount</div>
+                  <div className="text-lg font-bold text-red-700" title={
+                    viewingDetails.discount
+                      ? `Base: ${inr.format(orderTotal(viewingDetails))}  Discount: ${inr.format(viewingDetails.discount || 0)}`
+                      : undefined
+                  }>
+                    {inr.format(Math.max(0, orderTotal(viewingDetails) - (viewingDetails.discount || 0)))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => {
+                    setViewingDetails(null);
+                    openEdit(viewingDetails);
+                  }}
+                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  Edit Order
+                </button>
+                <button
+                  onClick={() => setViewingDetails(null)}
+                  className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

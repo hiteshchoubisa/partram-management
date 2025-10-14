@@ -6,6 +6,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import FormDialog from "../../components/ui/FormDialog";
 import AsyncSelect from "react-select/async";
+import { generateOrderId } from "../../lib/shortId";
 
 const inr = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" });
 const PRODUCT_BUCKET = process.env.NEXT_PUBLIC_PRODUCT_BUCKET || "product-photos";
@@ -145,6 +146,8 @@ export default function ShopPage() {
     e.preventDefault();
     if (!selectedClient || cart.length === 0) return;
     const payload = {
+      // Don't set id - let Supabase auto-generate UUID
+      order_number: generateOrderId(), // Use shorter ID as order number
       client: selectedClient,
       order_date: new Date().toISOString(),
       status: "Pending",

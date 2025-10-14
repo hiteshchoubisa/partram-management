@@ -8,6 +8,7 @@ import FormDialog from "../../components/ui/FormDialog";
 import DeleteConfirmDialog from "../../components/ui/DeleteConfirmDialog";
 import { supabase } from "../../lib/supabaseClient";
 import Pagination from "../../components/ui/Pagination"; // added
+import { generateProductId } from "../../lib/shortId";
 
 // Use env or fallback
 const PRODUCT_BUCKET = process.env.NEXT_PUBLIC_PRODUCT_BUCKET || "product-photos";
@@ -34,7 +35,7 @@ function sanitizeFilename(name: string) {
 }
 
 async function uploadPhoto(file: File) {
-  const path = `products/${crypto.randomUUID()}-${sanitizeFilename(file.name)}`;
+  const path = `products/${generateProductId()}-${sanitizeFilename(file.name)}`;
   const { data, error } = await supabase.storage
     .from(PRODUCT_BUCKET)
     .upload(path, file, { upsert: true, cacheControl: "3600", contentType: file.type });

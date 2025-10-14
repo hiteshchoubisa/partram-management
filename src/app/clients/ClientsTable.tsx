@@ -19,12 +19,21 @@ type Client = {
   address?: string | null;
   company?: string | null; // make optional
   city?: string | null;    // make optional
+  email?: string | null;
+  pincode?: string | null;
+  state?: string | null;
+  country?: string | null;
 };
 
 type FormState = {
   name: string;
   phone: string;
   address: string;
+  email: string;
+  city: string;
+  pincode: string;
+  state: string;
+  country: string;
 };
 
 export default function ClientsTable() {
@@ -32,7 +41,7 @@ export default function ClientsTable() {
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<Client | null>(null);
   const [deleting, setDeleting] = useState<Client | null>(null);
-  const [form, setForm] = useState<FormState>({ name: "", phone: "", address: "" });
+  const [form, setForm] = useState<FormState>({ name: "", phone: "", address: "", email: "", city: "", pincode: "", state: "", country: "" });
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -46,7 +55,12 @@ export default function ClientsTable() {
     return clients.filter(c =>
       c.name.toLowerCase().includes(q) ||
       (c.address ?? "").toLowerCase().includes(q) ||
-      (c.phone ? String(c.phone).toLowerCase().includes(q) : false)
+      (c.phone ? String(c.phone).toLowerCase().includes(q) : false) ||
+      (c.email ?? "").toLowerCase().includes(q) ||
+      (c.city ?? "").toLowerCase().includes(q) ||
+      (c.state ?? "").toLowerCase().includes(q) ||
+      (c.country ?? "").toLowerCase().includes(q) ||
+      (c.pincode ?? "").toLowerCase().includes(q)
     );
   }, [clients, query]);
 
@@ -90,13 +104,22 @@ export default function ClientsTable() {
 
   function openAdd() {
     setEditing(null);
-    setForm({ name: "", phone: "", address: "" });
+    setForm({ name: "", phone: "", address: "", email: "", city: "", pincode: "", state: "", country: "" });
     setIsOpen(true);
   }
 
   function openEdit(c: Client) {
     setEditing(c);
-    setForm({ name: c.name, phone: c.phone ?? "", address: c.address ?? "" });
+    setForm({ 
+      name: c.name, 
+      phone: c.phone ?? "", 
+      address: c.address ?? "",
+      email: c.email ?? "",
+      city: c.city ?? "",
+      pincode: c.pincode ?? "",
+      state: c.state ?? "",
+      country: c.country ?? "",
+    });
     setIsOpen(true);
   }
 
@@ -119,12 +142,12 @@ export default function ClientsTable() {
       // try full shape
       const full = await supabase
         .from("clients")
-        .select("id,name,phone,address,company,city")
+        .select("id,name,phone,address,company,city,email,pincode,state,country")
         .order("name", { ascending: true });
 
       // fallback without optional cols
       const resp = full.error
-        ? await supabase.from("clients").select("id,name,phone,address").order("name", { ascending: true })
+        ? await supabase.from("clients").select("id,name,phone,address,email,city,pincode,state,country").order("name", { ascending: true })
         : full;
 
       if (cancelled) return;
@@ -145,6 +168,10 @@ export default function ClientsTable() {
           address: c.address ?? null,
           company: "company" in c ? c.company ?? null : null,
           city: "city" in c ? c.city ?? null : null,
+          email: "email" in c ? c.email ?? null : null,
+          pincode: "pincode" in c ? c.pincode ?? null : null,
+          state: "state" in c ? c.state ?? null : null,
+          country: "country" in c ? c.country ?? null : null,
         }))
       );
     })();
@@ -167,6 +194,11 @@ export default function ClientsTable() {
       name: form.name.trim(),
       phone: phoneCheck.digits, // store normalized
       address: form.address.trim(),
+      email: form.email.trim() || null,
+      city: form.city.trim() || null,
+      pincode: form.pincode.trim() || null,
+      state: form.state.trim() || null,
+      country: form.country.trim() || null,
     };
 
     if (editing) {
@@ -218,6 +250,8 @@ export default function ClientsTable() {
   const clientColumns: Column<Client>[] = [
     { key: "name", header: "Name", accessor: (c) => c.name },
     { key: "phone", header: "Phone", accessor: (c) => (c.phone ? <PhoneCell phone={c.phone} /> : "-") },
+    { key: "email", header: "Email", accessor: (c) => c.email || "-" },
+    { key: "city", header: "City", accessor: (c) => c.city || "-" },
     { key: "address", header: "Address", accessor: (c) => c.address || "-" },
   ];
 
@@ -367,6 +401,18 @@ export default function ClientsTable() {
           />
         </div>
 
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium mb-1">Email</label>
+          <input
+            id="email"
+            type="email"
+            value={form.email}
+            onChange={(e) => handleChange("email", e.target.value)}
+            className="w-full rounded-md border border-black/10  bg-transparent px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/50"
+            placeholder="name@example.com"
+          />
+        </div>
+
         <PhoneInput
           id="phone"
           label="Phone"
@@ -387,6 +433,54 @@ export default function ClientsTable() {
             rows={3}
             required
           />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="city" className="block text-sm font-medium mb-1">City</label>
+            <input
+              id="city"
+              type="text"
+              value={form.city}
+              onChange={(e) => handleChange("city", e.target.value)}
+              className="w-full rounded-md border border-black/10  bg-transparent px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/50"
+              placeholder="City"
+            />
+          </div>
+          <div>
+            <label htmlFor="pincode" className="block text-sm font-medium mb-1">Pincode</label>
+            <input
+              id="pincode"
+              type="text"
+              inputMode="numeric"
+              value={form.pincode}
+              onChange={(e) => handleChange("pincode", e.target.value.replace(/[^\d]/g, "").slice(0, 10))}
+              className="w-full rounded-md border border-black/10  bg-transparent px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/50"
+              placeholder="e.g. 302001"
+            />
+          </div>
+          <div>
+            <label htmlFor="state" className="block text-sm font-medium mb-1">State</label>
+            <input
+              id="state"
+              type="text"
+              value={form.state}
+              onChange={(e) => handleChange("state", e.target.value)}
+              className="w-full rounded-md border border-black/10  bg-transparent px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/50"
+              placeholder="State"
+            />
+          </div>
+          <div>
+            <label htmlFor="country" className="block text-sm font-medium mb-1">Country</label>
+            <input
+              id="country"
+              type="text"
+              value={form.country}
+              onChange={(e) => handleChange("country", e.target.value)}
+              className="w-full rounded-md border border-black/10  bg-transparent px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/50"
+              placeholder="Country"
+            />
+          </div>
         </div>
       </FormDialog>
 
