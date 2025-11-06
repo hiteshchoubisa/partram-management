@@ -60,7 +60,12 @@ export default function Header() {
   return (
     <header className="header-bg w-full p-4 border-b border-zinc-200 ">
       <div className="h-10 flex justify-between items-center">
-        <Link href="/dashboard" className="flex items-center gap-2" prefetch>
+        <Link
+          href={user ? "/dashboard" : "/shop"}
+          className="flex items-center gap-2"
+          prefetch
+          aria-label="Home"
+        >
           <Image
             src="/logo-patram.svg"
             alt="Patram Management"

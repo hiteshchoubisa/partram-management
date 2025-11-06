@@ -593,9 +593,7 @@ export default function OrdersTable() {
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <p className="text-secondary-sm">
-          Manage orders. Inline status, date & time picker, and auto total.
-        </p>
+    
         <button
           type="button"
           onClick={openAdd}
