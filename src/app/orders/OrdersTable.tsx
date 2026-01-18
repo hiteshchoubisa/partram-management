@@ -8,6 +8,7 @@ import MobileCard from "../../components/MobileCard";
 import FormDialog from "../../components/ui/FormDialog";
 import Pagination from "../../components/ui/Pagination";
 import DeleteConfirmDialog from "../../components/ui/DeleteConfirmDialog";
+import Dialog from "../../components/ui/Dialog";
 import { supabase } from "../../lib/supabaseClient";
 import { supabaseHealth } from "../../lib/supabaseHealth";
 import AsyncSelect from "react-select/async";
@@ -148,12 +149,14 @@ export default function OrdersTable() {
   const [editing, setEditing] = useState<Order | null>(null);
   const [deleting, setDeleting] = useState<Order | null>(null);
   const [viewingDetails, setViewingDetails] = useState<Order | null>(null);
+  const [productSelectOpen, setProductSelectOpen] = useState<number | null>(null); // item index
+  const [productSearchQuery, setProductSearchQuery] = useState("");
 
   const [form, setForm] = useState<FormState>({
     client: "",
     orderDate: "",
     status: "Pending",
-    items: [{ kind: "product", productId: "", qty: 1 }],
+    items: [{ kind: "product", productId: "", qty: 0 }],
     message: "",
     discount: 0,
   });
@@ -284,7 +287,7 @@ export default function OrdersTable() {
 
   function openAdd() {
     setEditing(null);
-    setForm({ client: "", orderDate: "", status: "Pending", items: [{ kind: "product", productId: "", qty: 1 }], message: "", discount: 0 });
+    setForm({ client: "", orderDate: "", status: "Pending", items: [{ kind: "product", productId: "", qty: 0 }], message: "", discount: 0 });
     setIsOpen(true);
   }
 
@@ -332,14 +335,14 @@ export default function OrdersTable() {
   function addItemRow() {
     setForm((prev) => ({
       ...prev,
-      items: [...prev.items, { kind: "product", productId: "", qty: 1 }],
+      items: [...prev.items, { kind: "product", productId: "", qty: 0 }],
     }));
   }
 
   function addCustomItemRow() {
     setForm((prev) => ({
       ...prev,
-      items: [...prev.items, { kind: "custom", name: "", price: 0, qty: 1 }],
+      items: [...prev.items, { kind: "custom", name: "", price: 0, qty: 0 }],
     }));
   }
 
@@ -491,6 +494,15 @@ export default function OrdersTable() {
       }));
     return Promise.resolve(opts);
   };
+
+  const filteredProducts = useMemo(() => {
+    const q = productSearchQuery.trim().toLowerCase();
+    return availableProducts.filter((p) => 
+      !q || 
+      p.name.toLowerCase().includes(q) ||
+      (p.category && p.category.toLowerCase().includes(q))
+    );
+  }, [availableProducts, productSearchQuery]);
 
   // Minimal styling to match your UI
   const selectStyles = {
@@ -856,23 +868,11 @@ export default function OrdersTable() {
                             onChange={(e) =>
                               setItem(idx, { price: Number(e.target.value || 0) } as any)
                             }
-                            className="w-24 rounded-md border border-black/10  bg-transparent px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+                            className="w-20 rounded-md border border-black/10  bg-transparent px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
                             placeholder="Price"
                             required
                           />
-                          <input
-                            type="number"
-                            min={1}
-                            value={(it as any).qty}
-                            onChange={(e) =>
-                              setItem(idx, {
-                                qty: Math.max(1, Number.parseInt(e.target.value || "1", 10)),
-                              })
-                            }
-                            className="w-16 rounded-md border border-black/10  bg-transparent px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
-                            placeholder="Qty"
-                            required
-                          />
+                          
                         </div>
                         <div className="flex items-center justify-between md:justify-end gap-2 md:col-span-3">
                           <span className="text-price">
@@ -896,54 +896,40 @@ export default function OrdersTable() {
                       <div className="md:col-span-12 flex flex-col gap-2 md:grid md:grid-cols-12 md:gap-2">
                         <div className="flex gap-2 md:col-span-9">
                           <div className="flex-1">
-                            <AsyncSelect
-                              cacheOptions
-                              defaultOptions={availableProducts.slice(0, 100).map((p) => ({
-                                value: p.id,
-                                label: p.name,
-                                hint: inr.format(p.price),
-                                meta: { price: p.price, category: p.category },
-                              }))}
-                              loadOptions={loadProductOptions}
-                              value={
-                                selected
-                                  ? ({
-                                      value: selected.id,
-                                      label: selected.name,
-                                      meta: { price: selected.price, category: selected.category },
-                                    } as any)
-                                  : null
-                              }
-                              onChange={(opt: any) => setItem(idx, { productId: opt?.value ?? "" })}
-                              placeholder="Search product…"
-                              isClearable
-                              menuPortalTarget={typeof window !== "undefined" ? document.body : undefined}
-                              styles={selectStyles as any}
-                              formatOptionLabel={(opt: any) => (
-                                <div className="flex items-center justify-between gap-3">
-                                  <div className="flex flex-col min-w-0 flex-1">
-                                    <span className="truncate font-medium">{opt.label}</span>
-                                    {opt.meta?.category && (
-                                      <span className="text-xs text-gray-500 truncate">
-                                        {opt.meta.category}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <span className="text-sm font-medium text-green-600">
-                                    {opt.hint}
-                                  </span>
-                                </div>
-                              )}
-                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setProductSelectOpen(idx);
+                                setProductSearchQuery("");
+                              }}
+                              className="w-full rounded-md border border-black/10 bg-transparent px-3 py-2 text-sm text-left outline-none focus:ring-2 focus:ring-blue-500/50 hover:border-black/20 flex items-center justify-between"
+                            >
+                              <span className={selected ? "text-gray-900" : "text-gray-400"}>
+                                {selected ? selected.name : "Select product…"}
+                              </span>
+                              <span className="text-gray-400">▼</span>
+                            </button>
+                            {selected && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setItem(idx, { productId: "" });
+                                }}
+                                className="mt-1 text-xs text-red-600 hover:text-red-700"
+                              >
+                                Clear
+                              </button>
+                            )}
                           </div>
-                          <div className="w-10">
+                          <div className="w-20">
                             <input
                               type="number"
-                              min={1}
-                              value={it.qty}
+                              min={0}
+                              value={it.qty === 0 ? "" : it.qty}
                               onChange={(e) =>
                                 setItem(idx, {
-                                  qty: Math.max(1, Number.parseInt(e.target.value || "1", 10)),
+                                  qty: e.target.value === "" ? 0 : Math.max(0, Number.parseInt(e.target.value || "0", 10)),
                                 })
                               }
                               className="w-full rounded-md border border-black/10  bg-transparent px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
@@ -1022,6 +1008,74 @@ export default function OrdersTable() {
           <>Delete order for "{deleting?.client}" dated {deleting ? formatDateTimeLabel(deleting.orderDate) : ""}?</>
         }
       />
+
+      {/* Product Selection Popup */}
+      <Dialog
+        open={productSelectOpen !== null}
+        onClose={() => {
+          setProductSelectOpen(null);
+          setProductSearchQuery("");
+        }}
+        title="Select Product"
+        size="lg"
+        align="center"
+      >
+        <div className="space-y-4">
+          {/* Search Input */}
+          <div>
+            <input
+              type="text"
+              value={productSearchQuery}
+              onChange={(e) => setProductSearchQuery(e.target.value)}
+              placeholder="Search products by name or category…"
+              className="w-full rounded-md border border-black/10 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+              autoFocus
+            />
+          </div>
+
+          {/* Product List */}
+          <div className="max-h-[60vh] overflow-y-auto border border-black/10 rounded-md">
+            {filteredProducts.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                {productSearchQuery ? "No products found" : "No products available"}
+              </div>
+            ) : (
+              <div className="divide-y divide-black/10">
+                {filteredProducts.map((product) => (
+                  <button
+                    key={product.id}
+                    type="button"
+                    onClick={() => {
+                      if (productSelectOpen !== null) {
+                        setItem(productSelectOpen, { productId: product.id });
+                        setProductSelectOpen(null);
+                        setProductSearchQuery("");
+                      }
+                    }}
+                    className="w-full p-4 text-left hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 truncate">
+                          {product.name}
+                        </div>
+                        {product.category && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            {product.category}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-sm font-semibold text-green-600 shrink-0">
+                        {inr.format(product.price)}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </Dialog>
 
       {/* Order Details Popup */}
       {viewingDetails && (

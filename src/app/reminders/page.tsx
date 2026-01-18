@@ -373,7 +373,8 @@ export default function RemindersPage() {
       list = list.filter(
         (r) =>
           r.clientName.toLowerCase().includes(ql) ||
-          (r.phone || "").toString().includes(ql)
+          (r.phone || "").toString().includes(ql) ||
+          (r.address || "").toLowerCase().includes(ql)
       );
     }
 
